@@ -8,12 +8,14 @@ import { analyzePlayerAdvanced } from "@/lib/playerAnalysis";
 import { detectAltsAdvanced } from "@/lib/altDetection";
 import { ALGORITHM_CONFIGS, type AlgorithmMode } from "@/lib/constants";
 import { exportPlayerChat, exportPlayerChatHTML, exportFullReportJSON, exportSummaryHTML } from "@/lib/export";
+import { AVAILABLE_GAMES, getGameProfile, type GameProfile } from "@/lib/gameProfiles";
 
 // ============================================================================
 // REACT COMPONENT
 // ============================================================================
 
 export default function AnalyzerPage() {
+  const [selectedGame, setSelectedGame] = useState<GameProfile | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [rawText, setRawText] = useState("");
   const [activeTab, setActiveTab] = useState<"chat" | "players" | "alts" | "social" | "matrix" | "forensics">("chat");
@@ -23,6 +25,20 @@ export default function AnalyzerPage() {
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>("balanced");
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+
+  // When a game is selected, set the recommended algorithm
+  const handleSelectGame = useCallback((game: GameProfile) => {
+    setSelectedGame(game);
+    const recAlgo = game.recommendedAlgorithm as AlgorithmMode;
+    if (recAlgo && ALGORITHM_CONFIGS[recAlgo]) {
+      setAlgorithmMode(recAlgo);
+    }
+  }, []);
+
+  // Show game selector if no game is selected yet
+  if (!selectedGame) {
+    return <GameSelectorScreen onSelect={handleSelectGame} />;
+  }
 
   // Close export dropdown when clicking outside
   useEffect(() => {
@@ -160,15 +176,28 @@ export default function AnalyzerPage() {
                 Advanced analysis with stylometry, temporal patterns &amp; forensic linguistics
               </p>
             </div>
-            <a
-              href="/analyzer/docs"
-              className="px-4 py-2 bg-bg-tertiary text-text-secondary rounded-lg hover:bg-bg-tertiary/80 transition-colors text-sm inline-flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              How it works
-            </a>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setSelectedGame(null); setMessages([]); setRawText(""); }}
+                className="px-4 py-2 rounded-lg text-sm inline-flex items-center gap-2 border transition-colors hover:bg-bg-tertiary"
+                style={{ borderColor: selectedGame.color + "40", color: selectedGame.color }}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={selectedGame.icon} />
+                </svg>
+                {selectedGame.name}
+                <span className="text-text-muted text-xs">&#8203;(change)</span>
+              </button>
+              <a
+                href="/analyzer/docs"
+                className="px-4 py-2 bg-bg-tertiary text-text-secondary rounded-lg hover:bg-bg-tertiary/80 transition-colors text-sm inline-flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Docs
+              </a>
+            </div>
           </div>
         </div>
 
@@ -395,7 +424,7 @@ export default function AnalyzerPage() {
         )}
 
         {/* Empty State */}
-        {messages.length === 0 && <EmptyState />}
+        {messages.length === 0 && <EmptyState game={selectedGame} />}
       </div>
     </div>
   );
@@ -1251,12 +1280,19 @@ function ForensicsPlayerCard({ stats, otherStats }: { stats: AdvancedPlayerStats
   );
 }
 
-function EmptyState() {
+function EmptyState({ game }: { game?: GameProfile | null }) {
+  const format = game?.chatFormats?.[0];
   return (
     <div className="bg-bg-secondary rounded-xl border border-border p-12 text-center">
       <div className="text-6xl mb-4">&#128172;</div>
       <h2 className="text-xl font-semibold text-text-primary mb-2">Upload a chat log to begin</h2>
-      <p className="text-text-secondary mb-4">Supported format: [HH:MM:SS] &lt;PlayerName&gt; message</p>
+      {format ? (
+        <p className="text-text-secondary mb-4">
+          Expected format for <strong>{game?.name}</strong>: <code className="bg-bg-tertiary px-2 py-1 rounded text-sm">{format.formatExample}</code>
+        </p>
+      ) : (
+        <p className="text-text-secondary mb-4">Supported format: [HH:MM:SS] &lt;PlayerName&gt; message</p>
+      )}
       <div className="bg-bg-tertiary rounded-lg p-4 text-left font-mono text-sm max-w-md mx-auto">
         <div className="text-text-muted">[21:25:05] &lt;Yarpii&gt; hey everyone whats going on</div>
         <div className="text-text-muted">[21:25:12] &lt;Minabello&gt; not much just working on my deed</div>
@@ -1282,6 +1318,133 @@ function EmptyState() {
             <div className="font-semibold text-success">Network Analysis</div>
             <div className="text-text-muted">Interaction patterns and conversation partners</div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// GAME SELECTOR SCREEN
+// ============================================================================
+
+function GameSelectorScreen({ onSelect }: { onSelect: (game: GameProfile) => void }) {
+  return (
+    <div className="min-h-screen pt-24 pb-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-text-primary mb-4">
+            Choose your game
+          </h1>
+          <p className="text-text-secondary text-lg max-w-2xl mx-auto">
+            Each game has different chat formats, terminology, and detection patterns.
+            Select your game to get the most accurate analysis.
+          </p>
+        </div>
+
+        {/* Game Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {AVAILABLE_GAMES.map((game) => {
+            const isLive = game.status === "live";
+            return (
+              <button
+                key={game.id}
+                onClick={() => isLive && onSelect(game)}
+                disabled={!isLive}
+                className={`relative text-left bg-bg-secondary rounded-2xl border p-6 transition-all group ${
+                  isLive
+                    ? "border-border hover:border-opacity-100 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+                    : "border-border/50 opacity-50 cursor-not-allowed"
+                }`}
+                style={isLive ? { ["--game-color" as string]: game.color } : {}}
+              >
+                {/* Status badge */}
+                <div className="absolute top-4 right-4">
+                  {isLive ? (
+                    <span className="px-2.5 py-1 bg-success/20 text-success text-xs rounded-full font-semibold inline-flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+                      LIVE
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 bg-warning/20 text-warning text-xs rounded-full font-semibold">
+                      COMING SOON
+                    </span>
+                  )}
+                </div>
+
+                {/* Icon */}
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
+                  style={{ backgroundColor: game.color + "15" }}
+                >
+                  <svg
+                    className="w-7 h-7"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    style={{ color: game.color }}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={game.icon} />
+                  </svg>
+                </div>
+
+                {/* Info */}
+                <h3 className="text-xl font-bold text-text-primary mb-2">
+                  {game.name}
+                </h3>
+                <p className="text-text-secondary text-sm mb-4 leading-relaxed">
+                  {game.description}
+                </p>
+
+                {/* Chat format preview */}
+                {game.chatFormats[0] && (
+                  <div className="bg-bg-tertiary rounded-lg p-3 font-mono text-xs text-text-muted">
+                    <div className="text-text-muted/60 text-[10px] uppercase tracking-wider mb-1">Chat format</div>
+                    {game.chatFormats[0].formatExample}
+                  </div>
+                )}
+
+                {/* Abbreviations preview for live games */}
+                {isLive && Object.keys(game.abbreviations).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {Object.entries(game.abbreviations).slice(0, 6).map(([abbr]) => (
+                      <span
+                        key={abbr}
+                        className="px-2 py-0.5 rounded text-xs font-mono"
+                        style={{ backgroundColor: game.color + "15", color: game.color }}
+                      >
+                        {abbr}
+                      </span>
+                    ))}
+                    {Object.keys(game.abbreviations).length > 6 && (
+                      <span className="px-2 py-0.5 text-text-muted text-xs">
+                        +{Object.keys(game.abbreviations).length - 6} more
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Hover arrow for live games */}
+                {isLive && (
+                  <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Info footer */}
+        <div className="bg-info/10 border border-info/30 rounded-xl p-4 text-center">
+          <p className="text-info text-sm">
+            <strong>Missing your game?</strong> Select &quot;Generic / Custom&quot; — the core forensic analysis engine
+            works with any timestamped chat format. Game-specific profiles add optimized terminology
+            and detection patterns.
+          </p>
         </div>
       </div>
     </div>
