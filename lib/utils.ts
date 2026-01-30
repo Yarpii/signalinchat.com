@@ -11,7 +11,7 @@ export function getPlayerColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash % 360);
-  return `hsl(${hue}, 70%, 65%)`;
+  return `hsl(${hue}, 60%, 38%)`;
 }
 
 /**
