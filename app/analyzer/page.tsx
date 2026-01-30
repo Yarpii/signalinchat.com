@@ -39,11 +39,6 @@ export default function AnalyzerPage() {
     }
   }, []);
 
-  // Show game selector if no game is selected yet
-  if (!selectedGame) {
-    return <GameSelectorScreen onSelect={handleSelectGame} />;
-  }
-
   // Close export dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -170,6 +165,11 @@ export default function AnalyzerPage() {
     const s2 = playerStats.find(s => s.name === compareMode[1]);
     return s1 && s2 ? [s1, s2] as [AdvancedPlayerStats, AdvancedPlayerStats] : null;
   }, [compareMode, playerStats]);
+
+  // Show game selector if no game is selected yet
+  if (!selectedGame) {
+    return <GameSelectorScreen onSelect={handleSelectGame} />;
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-8 px-4">
