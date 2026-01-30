@@ -25,6 +25,10 @@ export default function AnalyzerPage() {
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>("balanced");
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const sampleChat = useMemo(
+    () => `[21:25:05] <Riona> hey team, anyone running the mine later?\n[21:25:12] <Verrin> yeah after dinner, need more bricks\n[21:25:18] <Kalea> i can bring mortar if someone has tools\n[21:26:03] <Riona> ty kalea, i have spare picks\n[21:27:44] <Verrin> btw lol i always forget caps\n[21:28:10] <Kalea> no worries :) i'll be on at 8\n[21:29:02] <Riona> same, see you then\n[21:31:50] <AltRiona> hey team, anyone running the mine later?\n[21:32:08] <AltRiona> ty kalea, i have spare picks\n[21:33:21] <Kalea> deja vu? haha`,
+    []
+  );
 
   // When a game is selected, set the recommended algorithm
   const handleSelectGame = useCallback((game: GameProfile) => {
@@ -155,6 +159,11 @@ export default function AnalyzerPage() {
     }
   }, [rawText, parseSingleChat]);
 
+  const handleLoadSample = useCallback(() => {
+    setRawText(sampleChat);
+    parseSingleChat(sampleChat);
+  }, [sampleChat, parseSingleChat]);
+
   const getCompareStats = useMemo(() => {
     if (!compareMode) return null;
     const s1 = playerStats.find(s => s.name === compareMode[0]);
@@ -232,6 +241,34 @@ export default function AnalyzerPage() {
                 >
                   Analyze
                 </button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 rounded-lg border border-border bg-bg-tertiary/40 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-text-primary mb-1">Quick start</h3>
+                <ol className="text-xs text-text-muted list-decimal list-inside space-y-1">
+                  <li>Upload or paste chat logs.</li>
+                  <li>Review similarities and reasons.</li>
+                  <li>Validate in Chat or Forensics Lab.</li>
+                </ol>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleLoadSample}
+                  className="px-3 py-2 bg-info/20 text-info rounded-lg text-xs hover:bg-info/30"
+                >
+                  Load sample chat
+                </button>
+                {messages.length > 0 && (
+                  <button
+                    onClick={() => { setMessages([]); setRawText(""); setSelectedPlayers([]); setCompareMode(null); }}
+                    className="px-3 py-2 bg-bg-secondary text-text-secondary rounded-lg text-xs hover:bg-bg-tertiary"
+                  >
+                    Clear data
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -733,6 +770,14 @@ function AltsTab({
             <span>Min messages: {activeConfig.minMessages}</span>
           </div>
         </div>
+      </div>
+      <div className="bg-bg-secondary rounded-xl border border-border p-4 text-sm">
+        <h4 className="font-semibold text-text-primary mb-2">How to interpret similarities</h4>
+        <ul className="text-text-secondary list-disc list-inside space-y-1">
+          <li>Scores are probabilistic, not definitive proof.</li>
+          <li>Review reasons and chat context before acting.</li>
+          <li>Use &quot;Forensics Lab&quot; for side-by-side validation.</li>
+        </ul>
       </div>
 
       {altSuspicions.map((suspicion, idx) => (
