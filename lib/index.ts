@@ -16,6 +16,7 @@ export type {
   ParsedLine,
   HandoffResult,
   WurmTopicOverlap,
+  GameTopicOverlap,
   // NEW types
   FunctionWordProfile,
   ActivityPattern,
@@ -30,17 +31,27 @@ export type {
 export {
   STOP_WORDS,
   COMMON_GAMING_WORDS,
-  WURM_TERMS,
-  WURM_COMMON_RESPONSES,
   TOPIC_WORDS,
   TYPO_CHECKS,
   LETTER_SUBSTITUTION_PATTERNS,
   EMOTE_PATTERNS,
+  buildCommonWordsForGame,
   // Algorithm modes
   ALGORITHM_CONFIGS,
   type AlgorithmMode,
   type AlgorithmConfig,
 } from "./constants";
+
+// Game profiles
+export {
+  GAME_PROFILES,
+  WURM_ONLINE_PROFILE,
+  GENERIC_PROFILE,
+  getGameProfile,
+  getAvailableProfiles,
+  type GameProfile,
+  type GameProfileId,
+} from "./gameProfiles";
 
 // Utilities
 export { getPlayerColor, cosineSimilarity, distributionSimilarity } from "./utils";
@@ -81,7 +92,9 @@ export {
   findMentionedPlayers,
   extractCommonWords,
   extractCommonPhrases,
+  extractGameTopics,
   extractWurmTopics,
+  detectGameTopicOverlap,
   detectWurmTopicOverlap,
   buildRareWordIndex,
   detectSharedRareWords,

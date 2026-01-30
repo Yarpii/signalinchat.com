@@ -3,16 +3,16 @@
 // ============================================================================
 
 import type { ChatMessage, ParsedLine } from "./types";
+import type { GameProfile } from "./gameProfiles";
 
 /**
- * System/bot player names to exclude from analysis
+ * Default system/bot player names to exclude from analysis
  * These are game-generated messages, not real players
  */
-const SYSTEM_PLAYERS = new Set([
+const DEFAULT_SYSTEM_PLAYERS = new Set([
   "system",
   "systeem",
   "server",
-  "wurm",
   "gm",
   "gamemaster",
   "admin",
@@ -28,13 +28,27 @@ const SYSTEM_PLAYERS = new Set([
 ]);
 
 /**
+ * Build full system players set (defaults + game-specific)
+ */
+function buildSystemPlayers(gameProfile?: GameProfile): Set<string> {
+  const set = new Set(DEFAULT_SYSTEM_PLAYERS);
+  if (gameProfile) {
+    for (const p of gameProfile.systemPlayers) {
+      set.add(p.toLowerCase());
+    }
+  }
+  return set;
+}
+
+/**
  * Check if a player name is a system account
  */
-export function isSystemPlayer(playerName: string): boolean {
+export function isSystemPlayer(playerName: string, gameProfile?: GameProfile): boolean {
   const lower = playerName.toLowerCase().trim();
+  const systemPlayers = buildSystemPlayers(gameProfile);
 
   // Exact match
-  if (SYSTEM_PLAYERS.has(lower)) return true;
+  if (systemPlayers.has(lower)) return true;
 
   // Starts with system identifiers
   if (lower.startsWith("system") || lower.startsWith("systeem")) return true;
@@ -123,7 +137,7 @@ export function parseChatLine(line: string, lineNumber: number, currentDayIndex:
 /**
  * Parse chat text with multi-day support
  */
-export function parseChat(text: string, dayOffset: number = 0): ChatMessage[] {
+export function parseChat(text: string, dayOffset: number = 0, gameProfile?: GameProfile): ChatMessage[] {
   const lines = text.split("\n");
   const parsed: ChatMessage[] = [];
   let currentDayIndex = dayOffset;
@@ -146,7 +160,7 @@ export function parseChat(text: string, dayOffset: number = 0): ChatMessage[] {
 
     if (result.message) {
       // Skip system messages - they shouldn't be analyzed as player chat
-      if (isSystemPlayer(result.message.player)) {
+      if (isSystemPlayer(result.message.player, gameProfile)) {
         continue;
       }
 
@@ -169,12 +183,12 @@ export function parseChat(text: string, dayOffset: number = 0): ChatMessage[] {
 /**
  * Parse multiple chat files together
  */
-export function parseMultipleChats(texts: string[]): ChatMessage[] {
+export function parseMultipleChats(texts: string[], gameProfile?: GameProfile): ChatMessage[] {
   let allMessages: ChatMessage[] = [];
   let dayOffset = 0;
 
   for (const text of texts) {
-    const parsed = parseChat(text, dayOffset);
+    const parsed = parseChat(text, dayOffset, gameProfile);
     if (parsed.length > 0) {
       allMessages = [...allMessages, ...parsed];
       // Increment day offset for next file

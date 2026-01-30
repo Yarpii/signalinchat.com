@@ -5,13 +5,13 @@
 import type {
   ChatMessage,
   AdvancedPlayerStats,
-  WurmTopicOverlap,
+  GameTopicOverlap,
   SocialInsight,
   ConversationPair,
   SlipPattern,
   SelfTalkIndicator
 } from "./types";
-import { STOP_WORDS, TOPIC_WORDS, WURM_TERMS, COMMON_GAMING_WORDS } from "./constants";
+import { STOP_WORDS, TOPIC_WORDS, COMMON_GAMING_WORDS } from "./constants";
 import { cosineSimilarity } from "./utils";
 
 /**
@@ -125,13 +125,15 @@ export function extractCommonPhrases(messages: string[]): string[] {
 }
 
 /**
- * Extract Wurm-specific topics
+ * Extract game-specific topics based on provided terms list
  */
-export function extractWurmTopics(messages: string[]): Map<string, number> {
+export function extractGameTopics(messages: string[], gameTerms: string[]): Map<string, number> {
   const topics = new Map<string, number>();
+  if (gameTerms.length === 0) return topics;
+
   const allText = messages.join(" ").toLowerCase();
 
-  for (const term of WURM_TERMS) {
+  for (const term of gameTerms) {
     const regex = new RegExp(`\\b${term}\\b`, "gi");
     const matches = allText.match(regex);
     if (matches) {
@@ -142,31 +144,34 @@ export function extractWurmTopics(messages: string[]): Map<string, number> {
   return topics;
 }
 
-/**
- * Detect Wurm topic overlap between two players
- */
-export function detectWurmTopicOverlap(p1: AdvancedPlayerStats, p2: AdvancedPlayerStats): WurmTopicOverlap {
-  const sharedTopics: string[] = [];
+/** @deprecated Use extractGameTopics instead */
+export const extractWurmTopics = (messages: string[]) => extractGameTopics(messages, TOPIC_WORDS);
 
-  for (const [topic, count1] of p1.wurmTopics) {
-    const count2 = p2.wurmTopics.get(topic);
+/**
+ * Detect game topic overlap between two players
+ */
+export function detectGameTopicOverlap(p1: AdvancedPlayerStats, p2: AdvancedPlayerStats): GameTopicOverlap {
+  const sharedTopics: string[] = [];
+  const topics = p1.gameTopics || p1.wurmTopics;
+  const otherTopics = p2.gameTopics || p2.wurmTopics;
+
+  for (const [topic] of topics) {
+    const count2 = otherTopics.get(topic);
     if (count2 && count2 > 0) {
-      // Both use this Wurm term
       sharedTopics.push(topic);
     }
   }
 
-  // Score based on shared unique topics (excluding very common ones)
-  const commonTopics = new Set(["deed", "village", "priest", "skill", "mine"]);
-  const uniqueShared = sharedTopics.filter(t => !commonTopics.has(t));
-
   let score = 0;
-  if (uniqueShared.length >= 5) score = 15;
-  else if (uniqueShared.length >= 3) score = 10;
-  else if (uniqueShared.length >= 1) score = 5;
+  if (sharedTopics.length >= 5) score = 15;
+  else if (sharedTopics.length >= 3) score = 10;
+  else if (sharedTopics.length >= 1) score = 5;
 
   return { score, sharedTopics };
 }
+
+/** @deprecated Use detectGameTopicOverlap instead */
+export const detectWurmTopicOverlap = detectGameTopicOverlap;
 
 /**
  * Build rare word index across all players

@@ -13,7 +13,7 @@ export default function HomePage() {
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/20 rounded-full text-accent text-sm mb-8">
               <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-              Now live — Wurm Online support
+              Multi-game support — select your game in the analyzer
             </div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-text-primary mb-6 leading-tight">
@@ -249,8 +249,9 @@ export default function HomePage() {
               Supported games
             </h2>
             <p className="text-text-secondary text-lg max-w-2xl mx-auto">
-              Starting with Wurm Online, expanding to more games. The core
-              analysis engine works with any timestamped chat format.
+              Select your game in the analyzer. The core analysis engine works
+              with any timestamped chat format — game-specific profiles add
+              vocabulary and tuning.
             </p>
           </div>
 
@@ -311,13 +312,13 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="bg-bg-secondary rounded-2xl border border-border/50 p-8 text-center opacity-60">
-              <div className="absolute top-3 right-3 px-2 py-1 bg-warning/20 text-warning text-xs rounded font-semibold">
-                COMING SOON
+            <div className="bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden">
+              <div className="absolute top-3 right-3 px-2 py-1 bg-success/20 text-success text-xs rounded font-semibold">
+                LIVE
               </div>
-              <div className="w-16 h-16 bg-bg-tertiary rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <svg
-                  className="w-8 h-8 text-text-muted"
+                  className="w-8 h-8 text-accent"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -331,11 +332,11 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-text-primary mb-2">
-                Generic / Custom
+                Generic / Other
               </h3>
               <p className="text-text-secondary text-sm">
-                Any timestamped chat format. Configure your own game
-                vocabulary and patterns.
+                Any timestamped chat format. Works with any game — no
+                game-specific vocabulary required.
               </p>
             </div>
           </div>

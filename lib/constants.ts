@@ -177,56 +177,6 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
   },
 };
 
-// ============================================================================
-// WURM ONLINE SPECIFIC PATTERNS
-// ============================================================================
-
-// Wurm trade chat patterns - WTS/WTB/WTT/PC prefixes
-export const WURM_TRADE_PATTERNS = [
-  /^wts\b/i,   // Want to sell
-  /^wtb\b/i,   // Want to buy
-  /^wtt\b/i,   // Want to trade
-  /^pc\b/i,    // Price check
-];
-
-// Wurm-specific abbreviations that are fingerprinting
-export const WURM_ABBREVIATIONS = new Set([
-  "bsb",      // Bulk storage bin
-  "fsb",      // Food storage bin
-  "ql",       // Quality level
-  "coc",      // Circle of Cunning
-  "woa",      // Wind of Ages
-  "botd",     // Blessings of the Dark
-  "aosp",     // Aura of Shared Pain
-  "lt",       // Life Transfer
-  "nim",      // Nimbleness
-  "ms",       // Mindstealer
-  "fa",       // Flaming Aura
-  "fb",       // Frostbrand
-  "rt",       // Rotting Touch
-  "imp",      // Improve/improving
-  "ench",     // Enchant/enchantment
-  "sac",      // Sacrifice
-  "carp",     // Carpentry
-  "bc",       // Blacksmithing/body control
-  "ws",       // Weaponsmithing
-  "js",       // Jewelry smithing
-  "fc",       // Fine carpentry
-  "sc",       // Ship building / stone cutting
-  "nat",      // Natural substances
-  "hfc",      // Hot food cooking
-  "mb",       // Masonry/body strength
-]);
-
-// Wurm kingdom/server specific greetings
-export const WURM_KINGDOM_GREETINGS = [
-  "hots",     // Horde of the Summoned
-  "jk",       // Jenn-Kellon
-  "mr",       // Mol-Rehan
-  "bl",       // Blacklight
-  "wl",       // Whitelight
-];
-
 // STOP WORDS for analysis - common words to filter out
 export const STOP_WORDS = new Set([
   "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
@@ -340,81 +290,14 @@ export const COMMON_GAMING_WORDS = new Set([
   "quest", "mission", "event", "update", "patch", "buff", "nerf", "stats",
   "guild", "clan", "alliance", "team", "group", "party", "friend", "friends",
   "noob", "newbie", "veteran", "admin", "moderator", "owner",
-  // Common Wurm terms (everyone uses these)
-  "deed", "village", "kingdom", "priest", "horse", "cart", "boat", "ship",
-  "mine", "mining", "forge", "anvil", "skill", "improve", "improving", "quality",
-  "rare", "supreme", "fantastic", "drake", "scale", "troll", "unique",
-  "bulk", "crate", "wagon", "highway", "road", "bridge", "house", "building",
+  // Common game items/concepts (generic, not game-specific)
+  "horse", "cart", "boat", "ship", "house", "building",
   "wood", "iron", "steel", "silver", "gold", "copper", "stone", "rock",
-  "water", "food", "meat", "fish", "wheat", "cotton", "leather", "cloth",
-  // Wurm skills and actions (common gameplay vocabulary)
-  "faith", "favor", "prayer", "channeling", "exorcism", "preaching",
-  "casted", "casting", "enchant", "enchanted", "enchanting", "dispel",
-  "imping", "imped", "mending", "repairing", "repaired", "creating",
-  "digging", "flattening", "leveling", "paving", "planning", "building",
-  "chopping", "cutting", "woodcutting", "logging", "planting", "harvesting",
-  "sowing", "farming", "tending", "picking", "foraging", "botanizing",
-  "fishing", "cooking", "baking", "roasting", "butchering", "milking",
-  "taming", "breeding", "grooming", "leading", "hitching", "riding",
-  "sailing", "mooring", "embarking", "disembarking", "loading", "unloading",
-  "smithing", "smelting", "casting", "tempering", "sharpening", "polishing",
-  "masonry", "carpentry", "tailoring", "leatherworking", "pottery", "alchemy",
-  "meditation", "meditating", "fighting", "archery", "shielding", "healing",
-  "prospecting", "analyzing", "examining", "repairing", "lockpicking",
-  // Wurm items, resources, and materials
-  "potato", "potatoes", "garlic", "onion", "onions", "pumpkin", "pumpkins",
-  "corn", "barley", "oat", "oats", "rye", "wemp", "reed", "rice",
-  "strawberry", "blueberry", "raspberry", "lingonberry", "cherry", "lemon",
-  "olive", "olives", "grape", "grapes", "apple", "maple", "birch", "cedar",
-  "willow", "walnut", "chestnut", "linden", "lavender", "camellia", "oleander",
-  "rose", "acorn", "hazelnut", "nutmeg", "fennel", "ginger", "basil",
-  "oregano", "parsley", "rosemary", "thyme", "sage", "cumin", "paprika",
-  "turmeric", "sassafras", "lovage", "nettles",
-  "plank", "planks", "shaft", "shafts", "brick", "bricks", "mortar",
-  "concrete", "slate", "marble", "sandstone", "pottery", "clay",
-  "lump", "lumps", "ribbon", "string", "rope", "chain", "rivet",
-  "nails", "fence", "fences", "gate", "gates", "door", "floor",
-  "oven", "kiln", "campfire", "fireplace", "still", "cauldron",
-  "needle", "spindle", "loom", "grindstone", "whetstone",
-  "pickaxe", "shovel", "hatchet", "hammer", "mallet", "chisel",
-  "rake", "scythe", "sickle", "trowel", "knife", "saw", "file",
-  "longsword", "shortsword", "twohander", "spear", "halberd", "shield",
-  "staff", "scepter", "statuette", "altar", "coffin", "fountain",
-  "lamp", "torch", "lantern", "candelabra", "brazier",
-  "saddle", "horseshoe", "bridle", "barding",
-  "rowboat", "sailboat", "corbita", "cog", "knarr", "caravel",
-  "dredge", "anchor", "mooring",
-  "backpack", "satchel", "knapsack", "quiver", "toolbelt",
-  "barrel", "bucket", "flask", "jar", "bowl", "plate", "cup",
-  "pelt", "hide", "fleece", "wool", "fur",
-  "zinc", "tin", "lead", "bronze", "brass", "electrum", "adamantine",
-  "glimmersteel", "seryll", "moonmetal",
-  // Wurm creatures and mobs
-  "spider", "scorpion", "goblin", "crocodile", "anaconda",
-  "hellhound", "hellhorse", "lava", "fiend", "dragon", "hatchling",
-  "unicorn", "bison", "deer", "pheasant", "rooster", "chicken", "hen",
-  "cattle", "bull", "calf", "sheep", "lamb", "pig", "dog", "cat",
-  "wolf", "bear", "lion", "gorilla", "hyena", "jackal", "cobra",
-  // Wurm enchantments and spells
-  "nimbleness", "mindstealer", "frostbrand", "flaming", "venom",
-  "rotting", "lifetransfer", "lurker", "opulence", "demise",
-  "blessing", "aura", "genesis", "strongwall", "charm",
-  "courier", "dark", "messenger", "reveal",
-  // Wurm game mechanics terms
-  "wurm", "karma", "sleep", "bonus", "affinity", "affinities",
-  "stamina", "nutrition", "thirst", "alignment", "reputation",
-  "favor", "difficulty", "timer", "cooldown", "decay",
-  "damage", "quality", "weight", "volume", "temperature",
-  "premium", "trader", "merchant", "token", "upkeep", "coffers",
-  "highway", "catseye", "waystone", "mailbox", "spirit",
-  "guard", "guards", "tower", "lighthouse", "colossus",
-  "rift", "source", "crystal", "fragment", "journal",
-  "terraforming", "flattening", "leveling", "surface",
-  "underground", "reinforced", "collapsed", "ceiling",
-  "perimeter", "border", "tile", "tiles", "slope",
-  // Server names and common places
-  "harmony", "melody", "cadence", "independence", "deliverance", "exodus",
-  "celebration", "xanadu", "pristine", "release", "defiance", "chaos", "elevation",
+  "water", "food", "meat", "fish", "leather", "cloth",
+  "highway", "road", "bridge", "door", "floor", "gate",
+  "quality", "damage", "weight", "volume", "temperature",
+  "timer", "cooldown", "decay", "bonus", "stamina",
+  "guard", "guards", "tower",
   // Common English words that falsely appear as "rare" in small groups
   // These are normal vocabulary, not stylistic fingerprints
   "recall", "stance", "drive", "window", "control", "recipe",
@@ -444,44 +327,25 @@ export const COMMON_GAMING_WORDS = new Set([
   "monitor", "headset", "controller", "gamepad", "setup", "config",
 ]);
 
-// Wurm-specific terminology
-export const WURM_TERMS = [
-  "deed", "village", "alliance", "kingdom",
-  "kos", "templars", "highway", "rift", "unique",
-  "priest", "vyn", "mag", "fo", "lib", "nahjo",
-  "drake", "scale", "rare", "supreme", "fantastic",
-  "terraform", "mine", "forge", "imp", "improving",
-  "channeling", "prayer", "benediction", "sermon",
-  "pvp", "pve", "defiance", "chaos", "elevation",
-  "independence", "deliverance", "exodus", "celebration",
-  "xanadu", "pristine", "release", "harmony", "melody", "cadence",
-  "troll", "dragon", "goblin", "spider", "hell", "valrei",
-  "wurm", "karma", "sleep", "bonus", "affinity",
-  "bulk", "bsb", "fsb", "crate", "wagon", "knarr",
-  "corbita", "caravel", "sailboat", "rowboat",
-  "longsword", "shortsword", "maul", "axe", "pickaxe",
-  "shovel", "rake", "scythe", "sickle", "hammer",
-];
+/**
+ * Build a merged set of common words for a game profile.
+ * Combines the global COMMON_GAMING_WORDS with game-specific words.
+ */
+export function buildCommonWordsForGame(gameCommonWords: string[]): Set<string> {
+  const merged = new Set(COMMON_GAMING_WORDS);
+  for (const w of gameCommonWords) {
+    merged.add(w);
+  }
+  return merged;
+}
 
-// Common short responses that should be ignored in similarity analysis
-export const WURM_COMMON_RESPONSES = new Set([
-  "ok", "ty", "thx", "thanks", "np", "yw", "yes", "no", "yeah", "yep",
-  "nope", "sure", "done", "nice", "cool", "lol", "haha", "xd",
-  "gl", "gj", "gz", "gratz", "wb", "brb", "afk", "back",
-]);
-
-// Wurm-specific topic words for fingerprinting
+// Generic topic words for fingerprinting (game-agnostic)
 export const TOPIC_WORDS = [
-  "deed", "village", "kingdom", "pvp", "pve", "skill", "grind",
-  "horse", "cart", "boat", "ship", "mine", "forge", "anvil",
-  "weapon", "armor", "shield", "sword", "axe", "maul",
-  "priest", "mag", "vyn", "fo", "lib", "channeling", "prayer",
-  "drake", "scale", "rare", "supreme", "fantastic",
-  "newbie", "noob", "vet", "veteran", "old", "new",
+  "skill", "grind", "weapon", "armor", "shield",
+  "newbie", "noob", "veteran",
   "help", "need", "want", "sell", "buy", "trade", "price",
   "lag", "bug", "fix", "dev", "update", "patch",
   "alliance", "enemy", "friend", "war", "peace",
-  "troll", "dragon", "unique", "rift", "valrei",
 ];
 
 // Typo patterns with commonality flag.
