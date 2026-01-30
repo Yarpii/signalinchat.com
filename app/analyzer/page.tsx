@@ -2,7 +2,6 @@
 
 import { getAvailableProfiles } from "@/lib/gameProfiles";
 
-// Game icons as SVG paths
 const GAME_ICONS: Record<string, React.ReactNode> = {
   wurm: (
     <path
@@ -61,36 +60,43 @@ export default function GameSelectorPage() {
   const comingSoonProfiles = profiles.filter((p) => p.status === "coming_soon");
 
   return (
-    <div className="min-h-screen pt-24 pb-8 px-4">
+    <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl font-bold text-text-primary mb-4">
+        <div className="text-center mb-4">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1 text-text-muted hover:text-text-secondary transition-colors text-sm mb-6"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Home
+          </a>
+          <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-3">
             Select Your Game
           </h1>
-          <p className="text-text-secondary text-lg max-w-2xl mx-auto">
-            Each game has its own optimized chat behavior analysis tool with
-            game-specific vocabulary, detection tuning, and chat format support.
+          <p className="text-text-secondary text-base max-w-xl mx-auto">
+            Each game profile includes optimized vocabulary, detection tuning, and chat format support.
           </p>
         </div>
 
         {/* Live Games */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12 mt-10">
           {liveProfiles.map((profile) => (
             <a
               key={profile.id}
               href={`/analyzer/${profile.id}`}
-              className="group relative bg-bg-secondary rounded-2xl border border-border p-8 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/10 transition-all hover:-translate-y-1"
+              className="group relative bg-bg-secondary rounded-2xl border border-border p-8 hover:border-accent/50 hover:shadow-lg transition-all hover:-translate-y-1"
             >
-              {/* Live badge */}
               <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 bg-success/15 border border-success/30 rounded-full">
                 <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
                 <span className="text-success text-xs font-semibold">LIVE</span>
               </div>
 
-              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-accent/20 transition-colors">
+              <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-accent/20 transition-colors">
                 <svg
-                  className="w-8 h-8 text-accent"
+                  className="w-7 h-7 text-accent"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -102,12 +108,12 @@ export default function GameSelectorPage() {
               <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors">
                 {profile.name}
               </h3>
-              <p className="text-text-secondary text-sm leading-relaxed mb-4">
+              <p className="text-text-secondary text-sm leading-relaxed mb-5">
                 {profile.description}
               </p>
 
               <div className="flex items-center gap-2 text-accent text-sm font-medium">
-                Launch Analyzer
+                Open Analyzer
                 <svg
                   className="w-4 h-4 group-hover:translate-x-1 transition-transform"
                   fill="none"
@@ -129,13 +135,12 @@ export default function GameSelectorPage() {
         {/* Coming Soon */}
         {comingSoonProfiles.length > 0 && (
           <>
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-text-primary mb-2">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-px flex-1 bg-border" />
+              <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider">
                 Coming Soon
               </h2>
-              <p className="text-text-muted text-sm">
-                More games are being added with specialized detection profiles.
-              </p>
+              <div className="h-px flex-1 bg-border" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -144,7 +149,6 @@ export default function GameSelectorPage() {
                   key={profile.id}
                   className="relative bg-bg-secondary rounded-2xl border border-border/50 p-6 text-center overflow-hidden"
                 >
-                  {/* Coming soon overlay */}
                   <div className="absolute inset-0 bg-bg-primary/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
                     <span className="px-4 py-2 bg-warning/15 border border-warning/30 text-warning text-sm font-semibold rounded-full">
                       COMING SOON
@@ -174,15 +178,28 @@ export default function GameSelectorPage() {
         )}
 
         {/* Info box */}
-        <div className="mt-12 bg-accent/5 border border-accent/20 rounded-xl p-6 text-center">
-          <p className="text-text-secondary text-sm">
-            The core forensic analysis engine works with any timestamped chat
-            format. Game-specific profiles add optimized vocabulary filtering,
-            detection tuning, and trade pattern recognition.
-          </p>
-          <p className="text-text-muted text-xs mt-2">
-            100% client-side. Your chat logs never leave your browser.
-          </p>
+        <div className="mt-12 bg-bg-secondary border border-border rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-semibold text-text-primary text-sm mb-1">Works with any chat format</h4>
+              <p className="text-text-secondary text-sm">
+                The core forensic analysis engine works with any timestamped chat format.
+                Game-specific profiles add optimized vocabulary filtering, detection tuning,
+                and trade pattern recognition.
+              </p>
+              <p className="text-text-muted text-xs mt-2 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                100% client-side. Your chat logs never leave your browser.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
