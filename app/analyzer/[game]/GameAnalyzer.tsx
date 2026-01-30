@@ -953,7 +953,7 @@ function ScoreBreakdownBars({ suspicion }: { suspicion: AltSuspicion }) {
 
       {suspicion.sharedRareWords.length > 0 && (
         <div className="bg-bg-tertiary rounded-lg p-3 col-span-2 lg:col-span-1">
-          <div className="text-xs text-text-muted mb-1">Rare words</div>
+          <div className="text-xs text-text-muted mb-1">Shared unique words</div>
           <div className="flex flex-wrap gap-1">
             {suspicion.sharedRareWords.slice(0, 5).map((word, i) => (
               <span key={i} className="px-2 py-0.5 bg-warning/20 text-warning rounded text-xs">

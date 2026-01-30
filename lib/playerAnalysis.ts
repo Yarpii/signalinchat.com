@@ -195,10 +195,10 @@ export function generateHumanExplanation(
     parts.push(`- Same vocabulary complexity profile (Simpson's D, Yule's K metrics match)`);
   }
 
-  // Rare words
+  // Shared unique words
   if (sharedRareWords.length >= 3) {
     const wordExamples = sharedRareWords.slice(0, 3).map(w => `'${w}'`).join(", ");
-    parts.push(`- Both use rare words: ${wordExamples} (used by very few players)`);
+    parts.push(`- Both use words nobody else uses: ${wordExamples} (exclusive to this pair)`);
   }
 
   // Typos
