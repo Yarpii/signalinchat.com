@@ -1,56 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.signalinchat.com";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: "Signal In Chat - Game Chat Intelligence Platform",
-    template: "%s | Signal In Chat",
-  },
+  title: "Signal In Chat - Game Chat Intelligence Platform",
   description:
     "Detect alt accounts, analyze player behavior, and uncover hidden patterns in game chat logs using forensic linguistics and stylometry.",
-  applicationName: "Signal In Chat",
-  keywords: [
-    "game chat analysis",
-    "alt account detection",
-    "forensic linguistics",
-    "stylometry",
-    "player behavior analysis",
-    "authorship attribution",
-    "chat log analyzer",
-  ],
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    type: "website",
-    url: "/",
-    title: "Signal In Chat - Game Chat Intelligence Platform",
-    description:
-      "Detect alt accounts, analyze player behavior, and uncover hidden patterns in game chat logs using forensic linguistics and stylometry.",
-    siteName: "Signal In Chat",
-    locale: "en_US",
-  },
-  twitter: {
-    card: "summary",
-    title: "Signal In Chat - Game Chat Intelligence Platform",
-    description:
-      "Detect alt accounts, analyze player behavior, and uncover hidden patterns in game chat logs using forensic linguistics and stylometry.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
 };
 
 export default function RootLayout({
