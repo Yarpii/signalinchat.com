@@ -39,11 +39,6 @@ export default function AnalyzerPage() {
     }
   }, []);
 
-  // Show game selector if no game is selected yet
-  if (!selectedGame) {
-    return <GameSelectorScreen onSelect={handleSelectGame} />;
-  }
-
   // Close export dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -56,6 +51,11 @@ export default function AnalyzerPage() {
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [exportOpen]);
+
+  // Show game selector if no game is selected yet
+  if (!selectedGame) {
+    return <GameSelectorScreen onSelect={handleSelectGame} />;
+  }
 
   const players = useMemo(() => {
     const playerSet = new Set(messages.map(m => m.player));
