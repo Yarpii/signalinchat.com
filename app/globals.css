@@ -3,19 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #0a0a12;
-  --bg-secondary: #12121e;
-  --bg-tertiary: #1a1a2e;
-  --text-primary: #e8e8f0;
-  --text-secondary: #a0a0b8;
-  --text-muted: #606080;
-  --border: #2a2a3e;
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --error: #ef4444;
-  --warning: #f59e0b;
-  --success: #22c55e;
-  --info: #3b82f6;
+  --bg-primary: #f8f9fb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f2f5;
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a68;
+  --text-muted: #8a8aa0;
+  --border: #d8dce3;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --error: #dc2626;
+  --warning: #d97706;
+  --success: #16a34a;
+  --info: #2563eb;
 }
 
 * {
@@ -33,7 +33,7 @@ body {
 
 ::selection {
   background: var(--accent);
-  color: white;
+  color: #ffffff;
 }
 
 /* Smooth scrolling */

@@ -50,7 +50,7 @@ function playerColorCSS(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash % 360);
-  return `hsl(${hue}, 70%, 65%)`;
+  return `hsl(${hue}, 60%, 38%)`;
 }
 
 export function exportPlayerChatHTML(messages: ChatMessage[], playerNames: string[]) {
@@ -77,19 +77,19 @@ export function exportPlayerChatHTML(messages: ChatMessage[], playerNames: strin
   <title>Chat Log - ${escapeHtml(label)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; background: #0f0f1a; color: #e2e2e2; padding: 24px; }
+    body { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; background: #f8f9fb; color: #1a1a2e; padding: 24px; }
     .container { max-width: 900px; margin: 0 auto; }
     h1 { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 22px; margin-bottom: 4px; }
-    .meta { color: #888; font-size: 13px; margin-bottom: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .legend { background: #1e1e2e; border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; font-size: 13px; }
-    .legend-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .chat { background: #1e1e2e; border-radius: 12px; padding: 16px; overflow-y: auto; max-height: 80vh; }
+    .meta { color: #6b7280; font-size: 13px; margin-bottom: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .legend { background: #ffffff; border: 1px solid #d8dce3; border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; font-size: 13px; }
+    .legend-label { color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .chat { background: #ffffff; border: 1px solid #d8dce3; border-radius: 12px; padding: 16px; overflow-y: auto; max-height: 80vh; }
     .msg { padding: 3px 8px; border-radius: 4px; font-size: 13px; line-height: 1.6; }
-    .msg:hover { background: #262637; }
-    .ts { color: #555; }
+    .msg:hover { background: #f0f2f5; }
+    .ts { color: #8a8aa0; }
     .player { font-weight: bold; cursor: default; }
-    .text { color: #ccc; word-break: break-word; }
-    .footer { margin-top: 20px; color: #444; font-size: 11px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .text { color: #374151; word-break: break-word; }
+    .footer { margin-top: 20px; color: #9ca3af; font-size: 11px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     @media print {
       body { background: #fff; color: #000; }
       .chat { background: #f9f9f9 !important; max-height: none; }
@@ -216,23 +216,23 @@ export function exportSummaryHTML(data: FullReportData) {
   const totalDays = data.messages.length > 0 ? Math.max(...data.messages.map(m => m.dayIndex)) + 1 : 0;
 
   const suspicionRows = data.altSuspicions.map(s => {
-    const badgeColor = s.category === "critical" ? "#ef4444" : s.category === "high" ? "#f59e0b" : s.category === "medium" ? "#3b82f6" : "#6b7280";
+    const badgeColor = s.category === "critical" ? "#dc2626" : s.category === "high" ? "#d97706" : s.category === "medium" ? "#2563eb" : "#6b7280";
     const tags: string[] = [];
-    if (s.neverOnlineTogether) tags.push('<span style="background:#ef4444;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">NEVER ONLINE TOGETHER</span>');
-    if (s.handoffScore >= 20) tags.push('<span style="background:#f59e0b;color:#000;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">HANDOFF PATTERN</span>');
+    if (s.neverOnlineTogether) tags.push('<span style="background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">NEVER ONLINE TOGETHER</span>');
+    if (s.handoffScore >= 20) tags.push('<span style="background:#d97706;color:#000;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:bold;">HANDOFF PATTERN</span>');
 
     const reasonsList = s.reasons.map(r =>
       `<li><strong style="text-transform:uppercase;font-size:11px;color:${
-        r.type === "temporal" ? "#ef4444" : r.type === "linguistic" ? "#f59e0b" : r.type === "behavioral" ? "#8b5cf6" : r.type === "network" ? "#22c55e" : "#3b82f6"
-      }">${r.type}</strong> ${escapeHtml(r.description)} <span style="color:#888;">(+${r.weight})</span>${r.evidence ? `<br/><small style="color:#999;">${escapeHtml(r.evidence)}</small>` : ""}</li>`
+        r.type === "temporal" ? "#dc2626" : r.type === "linguistic" ? "#d97706" : r.type === "behavioral" ? "#7c3aed" : r.type === "network" ? "#16a34a" : "#2563eb"
+      }">${r.type}</strong> ${escapeHtml(r.description)} <span style="color:#6b7280;">(+${r.weight})</span>${r.evidence ? `<br/><small style="color:#9ca3af;">${escapeHtml(r.evidence)}</small>` : ""}</li>`
     ).join("");
 
     return `
-      <div style="background:#1e1e2e;border:1px solid ${badgeColor}44;border-radius:12px;padding:20px;margin-bottom:16px;">
+      <div style="background:#ffffff;border:1px solid ${badgeColor}44;border-radius:12px;padding:20px;margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <span style="font-size:18px;font-weight:bold;">${escapeHtml(s.player1)}</span>
-            <span style="color:#888;">&#8596;</span>
+            <span style="color:#6b7280;">&#8596;</span>
             <span style="font-size:18px;font-weight:bold;">${escapeHtml(s.player2)}</span>
             ${tags.join(" ")}
           </div>
@@ -240,60 +240,60 @@ export function exportSummaryHTML(data: FullReportData) {
             ${s.confidence}% similarity
           </span>
         </div>
-        <div style="background:#262637;border-radius:8px;padding:12px;margin-bottom:12px;">
-          <div style="font-size:13px;color:#ccc;white-space:pre-line;">${escapeHtml(s.humanExplanation)}</div>
+        <div style="background:#f0f2f5;border-radius:8px;padding:12px;margin-bottom:12px;">
+          <div style="font-size:13px;color:#374151;white-space:pre-line;">${escapeHtml(s.humanExplanation)}</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px;">
-          ${scoreBar("Temporal", s.scoreBreakdown.temporal + s.scoreBreakdown.handoff, 80, "#ef4444")}
-          ${scoreBar("Linguistic", s.scoreBreakdown.linguistic + s.scoreBreakdown.rareWords, 80, "#f59e0b")}
-          ${scoreBar("Behavioral", s.scoreBreakdown.behavioral, 50, "#8b5cf6")}
-          ${scoreBar("Network", s.scoreBreakdown.network, 20, "#22c55e")}
-          ${s.scoreBreakdown.bonus > 0 ? scoreBar("Bonus", s.scoreBreakdown.bonus, 50, "#3b82f6") : ""}
+          ${scoreBar("Temporal", s.scoreBreakdown.temporal + s.scoreBreakdown.handoff, 80, "#dc2626")}
+          ${scoreBar("Linguistic", s.scoreBreakdown.linguistic + s.scoreBreakdown.rareWords, 80, "#d97706")}
+          ${scoreBar("Behavioral", s.scoreBreakdown.behavioral, 50, "#7c3aed")}
+          ${scoreBar("Network", s.scoreBreakdown.network, 20, "#16a34a")}
+          ${s.scoreBreakdown.bonus > 0 ? scoreBar("Bonus", s.scoreBreakdown.bonus, 50, "#2563eb") : ""}
         </div>
         ${s.sharedRareWords.length > 0 ? `
           <div style="margin-bottom:12px;">
-            <span style="font-size:12px;color:#888;">Shared unique words: </span>
-            ${s.sharedRareWords.slice(0, 8).map(w => `<span style="background:#f59e0b22;color:#f59e0b;padding:2px 8px;border-radius:4px;font-size:12px;margin-right:4px;">${escapeHtml(w)}</span>`).join("")}
+            <span style="font-size:12px;color:#6b7280;">Shared unique words: </span>
+            ${s.sharedRareWords.slice(0, 8).map(w => `<span style="background:#d9770622;color:#d97706;padding:2px 8px;border-radius:4px;font-size:12px;margin-right:4px;">${escapeHtml(w)}</span>`).join("")}
           </div>
         ` : ""}
         <details>
-          <summary style="cursor:pointer;color:#888;font-size:13px;">View all ${s.reasons.length} reasons...</summary>
-          <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:#ccc;line-height:1.8;">${reasonsList}</ul>
+          <summary style="cursor:pointer;color:#6b7280;font-size:13px;">View all ${s.reasons.length} reasons...</summary>
+          <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:#374151;line-height:1.8;">${reasonsList}</ul>
         </details>
       </div>`;
   }).join("");
 
   const socialRows = data.socialInsights.map(i => {
-    const borderColor = i.insightType === "self_talk_suspected" ? "#ef4444" : i.insightType === "conflict_detected" ? "#f59e0b" : "#3b82f6";
+    const borderColor = i.insightType === "self_talk_suspected" ? "#dc2626" : i.insightType === "conflict_detected" ? "#d97706" : "#2563eb";
     const label = i.insightType === "self_talk_suspected" ? "SELF-TALK DETECTED" : i.insightType === "conflict_detected" ? "POSSIBLE CONFLICT" : i.insightType.replace(/_/g, " ").toUpperCase();
     return `
-      <div style="background:#1e1e2e;border:1px solid ${borderColor}44;border-radius:12px;padding:16px;margin-bottom:12px;">
+      <div style="background:#ffffff;border:1px solid ${borderColor}44;border-radius:12px;padding:16px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <strong>${escapeHtml(i.player1)}</strong>
-            <span style="color:#888;">&#8596;</span>
+            <span style="color:#6b7280;">&#8596;</span>
             <strong>${escapeHtml(i.player2)}</strong>
             <span style="background:${borderColor};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;">${label}</span>
           </div>
           <span style="color:${borderColor};font-weight:bold;">${i.confidence}%</span>
         </div>
-        <p style="color:#ccc;font-size:13px;margin:8px 0;">${escapeHtml(i.description)}</p>
-        <ul style="font-size:12px;color:#999;padding-left:20px;">
+        <p style="color:#374151;font-size:13px;margin:8px 0;">${escapeHtml(i.description)}</p>
+        <ul style="font-size:12px;color:#9ca3af;padding-left:20px;">
           ${i.evidence.map(e => `<li>${escapeHtml(e)}</li>`).join("")}
         </ul>
       </div>`;
   }).join("");
 
   const slipRows = data.slipPatterns.map(s => {
-    const borderColor = s.suspicionLevel === "high" ? "#ef4444" : s.suspicionLevel === "medium" ? "#f59e0b" : "#3b82f6";
+    const borderColor = s.suspicionLevel === "high" ? "#dc2626" : s.suspicionLevel === "medium" ? "#d97706" : "#2563eb";
     return `
-      <div style="background:#1e1e2e;border:1px solid ${borderColor}44;border-radius:12px;padding:16px;margin-bottom:12px;">
+      <div style="background:#ffffff;border:1px solid ${borderColor}44;border-radius:12px;padding:16px;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <strong>${escapeHtml(s.playerName)}</strong>
           <span style="background:${borderColor};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;">${s.slipType.replace(/_/g, " ").toUpperCase()}</span>
         </div>
-        <p style="color:#ccc;font-size:13px;margin:8px 0;">${escapeHtml(s.description)}</p>
-        <ul style="font-size:12px;color:#999;padding-left:20px;">
+        <p style="color:#374151;font-size:13px;margin:8px 0;">${escapeHtml(s.description)}</p>
+        <ul style="font-size:12px;color:#9ca3af;padding-left:20px;">
           ${s.evidence.map(e => `<li>${escapeHtml(e)}</li>`).join("")}
         </ul>
       </div>`;
@@ -323,30 +323,25 @@ export function exportSummaryHTML(data: FullReportData) {
   <title>Chat Forensics Report - ${new Date().toLocaleDateString()}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e2e2e2; padding: 24px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fb; color: #1a1a2e; padding: 24px; }
     .container { max-width: 1100px; margin: 0 auto; }
     h1 { font-size: 28px; margin-bottom: 4px; }
-    h2 { font-size: 20px; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 1px solid #333; }
-    .subtitle { color: #888; font-size: 14px; margin-bottom: 24px; }
+    h2 { font-size: 20px; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 1px solid #d8dce3; }
+    .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
-    .stat-card { background: #1e1e2e; border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-card { background: #ffffff; border: 1px solid #d8dce3; border-radius: 12px; padding: 16px; text-align: center; }
     .stat-value { font-size: 28px; font-weight: bold; }
-    .stat-label { color: #888; font-size: 12px; margin-top: 4px; }
-    .critical { color: #ef4444; }
-    .high { color: #f59e0b; }
-    .medium { color: #3b82f6; }
+    .stat-label { color: #6b7280; font-size: 12px; margin-top: 4px; }
+    .critical { color: #dc2626; }
+    .high { color: #d97706; }
+    .medium { color: #2563eb; }
     .low { color: #6b7280; }
-    table { width: 100%; border-collapse: collapse; background: #1e1e2e; border-radius: 12px; overflow: hidden; font-size: 13px; }
-    th { background: #262637; padding: 10px 12px; text-align: left; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-    td { border-top: 1px solid #2a2a3a; }
-    tr:hover td { background: #262637; }
+    table { width: 100%; border-collapse: collapse; background: #ffffff; border: 1px solid #d8dce3; border-radius: 12px; overflow: hidden; font-size: 13px; }
+    th { background: #f0f2f5; padding: 10px 12px; text-align: left; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { border-top: 1px solid #e5e7eb; }
+    tr:hover td { background: #f0f2f5; }
     details summary { cursor: pointer; }
-    .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #333; color: #555; font-size: 12px; text-align: center; }
-    @media print {
-      body { background: #fff; color: #000; }
-      .stat-card, table, div[style*="background:#1e1e2e"] { background: #f5f5f5 !important; border-color: #ddd !important; }
-      .stat-value, h1, h2, strong { color: #000 !important; }
-    }
+    .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #d8dce3; color: #9ca3af; font-size: 12px; text-align: center; }
   </style>
 </head>
 <body>
@@ -392,7 +387,7 @@ export function exportSummaryHTML(data: FullReportData) {
     ${data.altSuspicions.length > 0 ? `
     <h2>Alt Account Similarities (${data.altSuspicions.length})</h2>
     ${suspicionRows}
-    ` : "<h2>No Notable Similarities Found</h2><p style='color:#888;'>The analysis found no notable similarities.</p>"}
+    ` : "<h2>No Notable Similarities Found</h2><p style='color:#6b7280;'>The analysis found no notable similarities.</p>"}
 
     ${data.socialInsights.length > 0 ? `
     <h2>Social Insights (${data.socialInsights.length})</h2>
@@ -452,12 +447,12 @@ function escapeHtml(str: string): string {
 function scoreBar(label: string, value: number, max: number, color: string): string {
   const pct = Math.min((value / max) * 100, 100);
   return `
-    <div style="background:#262637;border-radius:8px;padding:8px 10px;">
+    <div style="background:#f0f2f5;border-radius:8px;padding:8px 10px;">
       <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
         <span style="color:${color};font-weight:bold;">${label}</span>
-        <span style="color:#888;">${value}/${max}</span>
+        <span style="color:#6b7280;">${value}/${max}</span>
       </div>
-      <div style="height:6px;background:#1a1a2a;border-radius:999px;overflow:hidden;">
+      <div style="height:6px;background:#e5e7eb;border-radius:999px;overflow:hidden;">
         <div style="height:100%;width:${pct}%;background:${color};border-radius:999px;"></div>
       </div>
     </div>`;
