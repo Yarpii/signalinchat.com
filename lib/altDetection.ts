@@ -5,7 +5,7 @@
 import type { ChatMessage, AdvancedPlayerStats, AltSuspicion, SimilarityMatrix, ScoreBreakdown, HandoffResult } from "./types";
 import { STOP_WORDS, ALGORITHM_CONFIGS, TYPO_CHECKS, type AlgorithmMode, type AlgorithmConfig } from "./constants";
 import { cosineSimilarity, distributionSimilarity } from "./utils";
-import { buildRareWordIndex, detectSharedRareWords, detectSelfTalk, detectSlips, generateSocialInsights } from "./behavioral";
+import { buildRareWordIndex, detectSharedUniqueWords, detectSelfTalk, detectSlips, generateSocialInsights } from "./behavioral";
 import { generateHumanExplanation } from "./playerAnalysis";
 import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams } from "./linguistic";
 import type { SocialInsight, SlipPattern } from "./types";
@@ -345,18 +345,18 @@ export function detectAltsAdvanced(
         });
       }
 
-      // ========== RARE WORD FINGERPRINT ==========
+      // ========== SHARED UNIQUE WORDS ==========
 
-      const sharedRareWords = detectSharedRareWords(p1, p2, rareWordIndex, stats.length);
+      const sharedRareWords = detectSharedUniqueWords(p1, p2, rareWordIndex, stats.length);
       if (sharedRareWords.length >= 5) {
         const baseScore = 30;
         const weightedScore = Math.round(baseScore * config.rareWordWeight);
         scoreBreakdown.rareWords = weightedScore;
         reasons.push({
           type: "linguistic",
-          description: "Multiple shared rare words",
+          description: "Multiple shared unique words",
           weight: weightedScore,
-          evidence: `${sharedRareWords.length} rare words: ${sharedRareWords.slice(0, 5).join(", ")}`,
+          evidence: `${sharedRareWords.length} words only used by this pair: ${sharedRareWords.slice(0, 5).join(", ")}`,
         });
       } else if (sharedRareWords.length >= 3) {
         const baseScore = 18;
@@ -364,9 +364,9 @@ export function detectAltsAdvanced(
         scoreBreakdown.rareWords = weightedScore;
         reasons.push({
           type: "linguistic",
-          description: "Some shared rare words",
+          description: "Some shared unique words",
           weight: weightedScore,
-          evidence: `${sharedRareWords.length} rare words: ${sharedRareWords.join(", ")}`,
+          evidence: `${sharedRareWords.length} words only used by this pair: ${sharedRareWords.join(", ")}`,
         });
       }
 

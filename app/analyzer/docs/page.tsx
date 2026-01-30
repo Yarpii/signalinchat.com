@@ -133,10 +133,10 @@ export default function DocsPage() {
           <p className="text-text-secondary mb-4">How players interact with the chat and what they talk about.</p>
           <div className="space-y-4">
             <div className="bg-bg-tertiary rounded-lg p-4">
-              <h3 className="font-semibold text-text-primary mb-2">Message Length, Greeting/Farewell Style, Common Phrases, Rare Words</h3>
+              <h3 className="font-semibold text-text-primary mb-2">Message Length, Greeting/Farewell Style, Common Phrases, Shared Unique Words</h3>
               <p className="text-text-secondary text-sm">
                 Consistent message lengths, how someone greets and says goodbye, unique phrases, and
-                rare vocabulary shared between accounts all contribute to the behavioral fingerprint.
+                vocabulary shared exclusively between suspected accounts all contribute to the behavioral fingerprint.
               </p>
             </div>
           </div>

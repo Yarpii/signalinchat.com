@@ -252,7 +252,7 @@ export function exportSummaryHTML(data: FullReportData) {
         </div>
         ${s.sharedRareWords.length > 0 ? `
           <div style="margin-bottom:12px;">
-            <span style="font-size:12px;color:#888;">Shared rare words: </span>
+            <span style="font-size:12px;color:#888;">Shared unique words: </span>
             ${s.sharedRareWords.slice(0, 8).map(w => `<span style="background:#f59e0b22;color:#f59e0b;padding:2px 8px;border-radius:4px;font-size:12px;margin-right:4px;">${escapeHtml(w)}</span>`).join("")}
           </div>
         ` : ""}

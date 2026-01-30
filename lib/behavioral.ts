@@ -12,7 +12,6 @@ import type {
   SelfTalkIndicator
 } from "./types";
 import { STOP_WORDS, TOPIC_WORDS, COMMON_GAMING_WORDS } from "./constants";
-import { COMMON_ENGLISH_WORDS } from "./wordFrequency";
 import { cosineSimilarity } from "./utils";
 
 /**
@@ -199,57 +198,57 @@ export function buildRareWordIndex(allStats: AdvancedPlayerStats[]): Map<string,
 }
 
 /**
- * Detect shared rare words between two players
+ * Detect shared unique words between two players.
+ * "Unique" means words used by only these two players (or very few others)
+ * in the entire chat — determined purely by chat context, no external dictionary needed.
  */
-export function detectSharedRareWords(
+export function detectSharedUniqueWords(
   p1: AdvancedPlayerStats,
   p2: AdvancedPlayerStats,
-  rareIndex: Map<string, Set<string>>,
+  wordIndex: Map<string, Set<string>>,
   totalPlayers: number
 ): string[] {
   const p1Text = p1.allMessages.join(" ").toLowerCase();
   const p2Text = p2.allMessages.join(" ").toLowerCase();
 
-  // Require longer words (5+ chars) to filter out common short words
+  // Require 5+ char words, exclude known gaming terms and stop words
   const p1Words = new Set(
     p1Text.split(/\s+/)
       .map(w => w.replace(/[^a-z]/g, ""))
-      .filter(w => w.length >= 5 && !COMMON_GAMING_WORDS.has(w) && !COMMON_ENGLISH_WORDS.has(w))
+      .filter(w => w.length >= 5 && !COMMON_GAMING_WORDS.has(w) && !STOP_WORDS.has(w))
   );
 
   const p2Words = new Set(
     p2Text.split(/\s+/)
       .map(w => w.replace(/[^a-z]/g, ""))
-      .filter(w => w.length >= 5 && !COMMON_GAMING_WORDS.has(w) && !COMMON_ENGLISH_WORDS.has(w))
+      .filter(w => w.length >= 5 && !COMMON_GAMING_WORDS.has(w) && !STOP_WORDS.has(w))
   );
 
-  const sharedRare: string[] = [];
-  // Dynamic threshold: in small groups most words are used by few players,
-  // so scale the rarity threshold down. Word must be used by at most
-  // ~15% of total players (minimum 2) to count as rare.
-  const rareThreshold = Math.max(2, Math.floor(totalPlayers * 0.15));
+  const sharedUnique: string[] = [];
+  // Word must be used by at most 2 players (ideally only these two)
+  // to be considered truly unique to this pair.
+  const uniqueThreshold = 2;
 
   for (const word of p1Words) {
     if (p2Words.has(word)) {
-      const usageCount = rareIndex.get(word)?.size || 0;
-      // Must be used by very few players relative to the group size
-      if (usageCount > 0 && usageCount <= rareThreshold) {
-        // Extra filter: require minimum word length of 6 for very common-sounding words
-        // Words 5 chars are only kept if used by exactly 1-2 players (very strict)
-        if (word.length >= 6 || usageCount <= 2) {
-          sharedRare.push(word);
-        }
+      const usageCount = wordIndex.get(word)?.size || 0;
+      // Only count words used exclusively by these two players (or just one + the other)
+      if (usageCount > 0 && usageCount <= uniqueThreshold) {
+        sharedUnique.push(word);
       }
     }
   }
 
-  // Sort by rarity (fewer users = more rare)
-  return sharedRare.sort((a, b) => {
-    const aCount = rareIndex.get(a)?.size || 0;
-    const bCount = rareIndex.get(b)?.size || 0;
+  // Sort by exclusivity (fewer users = more unique)
+  return sharedUnique.sort((a, b) => {
+    const aCount = wordIndex.get(a)?.size || 0;
+    const bCount = wordIndex.get(b)?.size || 0;
     return aCount - bCount;
   }).slice(0, 10);
 }
+
+/** @deprecated Use detectSharedUniqueWords instead */
+export const detectSharedRareWords = detectSharedUniqueWords;
 
 // ============================================================================
 // SOCIAL ANALYSIS FUNCTIONS (v4.1)
