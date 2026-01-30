@@ -3,7 +3,7 @@
 // ============================================================================
 
 import type { ChatMessage, AdvancedPlayerStats, AltSuspicion, SimilarityMatrix, ScoreBreakdown, HandoffResult } from "./types";
-import { STOP_WORDS, ALGORITHM_CONFIGS, type AlgorithmMode, type AlgorithmConfig } from "./constants";
+import { STOP_WORDS, ALGORITHM_CONFIGS, TYPO_CHECKS, type AlgorithmMode, type AlgorithmConfig } from "./constants";
 import { cosineSimilarity, distributionSimilarity } from "./utils";
 import { buildRareWordIndex, detectSharedRareWords, detectSelfTalk, detectSlips, generateSocialInsights } from "./behavioral";
 import { generateHumanExplanation } from "./playerAnalysis";
@@ -280,8 +280,10 @@ export function detectAltsAdvanced(
       const brunetsWDiff = Math.abs(p1.brunetsW - p2.brunetsW);
       const yulesKDiff = Math.abs(p1.yulesK - p2.yulesK);
 
-      // All three metrics should be similar for same author
-      if (simpsonsDiff < 0.01 && brunetsWDiff < 1 && yulesKDiff < 20) {
+      // All three metrics should be similar for same author.
+      // Note: casual English chat has a fairly narrow range for these metrics,
+      // so thresholds must be tight to avoid flagging normal same-language speakers.
+      if (simpsonsDiff < 0.005 && brunetsWDiff < 0.5 && yulesKDiff < 10) {
         const baseScore = 20;
         const weightedScore = Math.round(baseScore * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -291,7 +293,7 @@ export function detectAltsAdvanced(
           weight: weightedScore,
           evidence: `Simpson's D: ${simpsonsDiff.toFixed(3)} diff, Brunet's W: ${brunetsWDiff.toFixed(1)} diff, Yule's K: ${yulesKDiff.toFixed(0)} diff`,
         });
-      } else if (simpsonsDiff < 0.02 && brunetsWDiff < 2 && yulesKDiff < 40) {
+      } else if (simpsonsDiff < 0.01 && brunetsWDiff < 1 && yulesKDiff < 20) {
         const baseScore = 10;
         const weightedScore = Math.round(baseScore * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -396,7 +398,14 @@ export function detectAltsAdvanced(
       // ========== TYPO PATTERNS ==========
 
       const sharedTypos = p1.typoPatterns.filter(t => p2.typoPatterns.includes(t));
-      if (sharedTypos.length >= 3) {
+      // Separate distinctive typos (real fingerprints) from common ones (most English speakers make these)
+      const distinctiveSharedTypos = sharedTypos.filter(t => {
+        const check = TYPO_CHECKS.find(c => c.label === t);
+        return check && !check.common;
+      });
+      const commonSharedTypos = sharedTypos.length - distinctiveSharedTypos.length;
+
+      if (distinctiveSharedTypos.length >= 3) {
         const baseScore = 25;
         const weightedScore = Math.round(baseScore * config.typoWeight * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -404,10 +413,20 @@ export function detectAltsAdvanced(
           type: "linguistic",
           description: "Same distinctive typos",
           weight: weightedScore,
-          evidence: sharedTypos.join(", "),
+          evidence: distinctiveSharedTypos.join(", "),
         });
-      } else if (sharedTypos.length === 2) {
-        const baseScore = 12;
+      } else if (distinctiveSharedTypos.length >= 2) {
+        const baseScore = 15;
+        const weightedScore = Math.round(baseScore * config.typoWeight * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Shared distinctive typo patterns",
+          weight: weightedScore,
+          evidence: distinctiveSharedTypos.join(", "),
+        });
+      } else if (distinctiveSharedTypos.length >= 1 && commonSharedTypos >= 2) {
+        const baseScore = 10;
         const weightedScore = Math.round(baseScore * config.typoWeight * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
         reasons.push({
@@ -417,6 +436,8 @@ export function detectAltsAdvanced(
           evidence: sharedTypos.join(", "),
         });
       }
+      // Note: only common typos shared (no distinctive ones) = no score.
+      // Common typos like teh, alot, triple-letters are too prevalent in casual English.
 
       // ========== GREETING/FAREWELL STYLE (NEW) ==========
 

@@ -57,7 +57,8 @@ export interface AdvancedPlayerStats {
   responsePartners: Map<string, number>; // Who they respond to most
   mentionedPlayers: Set<string>; // Players they mention
   topicFingerprint: Map<string, number>; // Topic word frequencies
-  wurmTopics: Map<string, number>; // Wurm-specific topic usage
+  wurmTopics: Map<string, number>; // Game-specific topic usage (kept for backwards compat)
+  gameTopics: Map<string, number>; // Game-specific topic usage
 
   // Raw data for comparison
   allMessages: string[];
@@ -167,11 +168,14 @@ export interface HandoffResult {
   totalTransitions: number;
 }
 
-// Wurm topic overlap result
-export interface WurmTopicOverlap {
+// Game topic overlap result
+export interface GameTopicOverlap {
   score: number;
   sharedTopics: string[];
 }
+
+// Backwards compatibility alias
+export type WurmTopicOverlap = GameTopicOverlap;
 
 // ============================================================================
 // SOCIAL ANALYSIS TYPES (v4.1)

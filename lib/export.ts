@@ -169,7 +169,8 @@ function serializePlayerStats(stats: AdvancedPlayerStats) {
     responsePartners: Object.fromEntries(stats.responsePartners),
     mentionedPlayers: [...stats.mentionedPlayers],
     topicFingerprint: Object.fromEntries(stats.topicFingerprint),
-    wurmTopics: Object.fromEntries(stats.wurmTopics),
+    gameTopics: Object.fromEntries(stats.gameTopics || stats.wurmTopics),
+    wurmTopics: Object.fromEntries(stats.wurmTopics), // backwards compat
     allMessages: stats.allMessages,
     messageTimes: stats.messageTimes,
     absoluteTimes: stats.absoluteTimes,

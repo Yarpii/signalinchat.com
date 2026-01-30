@@ -44,8 +44,8 @@ export interface AlgorithmConfig {
 
 export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
   balanced: {
-    name: "Balanced (v4.0)",
-    description: "Default algorithm with good accuracy and low false positives",
+    name: "Balanced (v4.2)",
+    description: "Default algorithm with good accuracy and low false positives. Tuned to reduce false positives for same-language speakers.",
     minMessages: 20,
     minScoreToReport: 70,
     minStrongReasons: 2,
@@ -54,12 +54,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 1.0,
     networkWeight: 1.0,
     functionWordWeight: 1.0,
-    ngramWeight: 1.0,
+    ngramWeight: 0.7,           // Reduced - n-grams are language-dependent, not person-dependent
     typoWeight: 1.0,
     rareWordWeight: 1.0,
     handoffWeight: 1.0,
-    ngramThresholdHigh: 0.97,
-    ngramThresholdMed: 0.94,
+    ngramThresholdHigh: 0.985,  // Raised - same-language speakers already score ~0.94-0.97
+    ngramThresholdMed: 0.97,    // Raised
     functionWordThresholdHigh: 0.92,
     functionWordThresholdMed: 0.85,
     confidenceMultiplier: 0.40,
@@ -76,12 +76,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 0.8,
     networkWeight: 0.5,
     functionWordWeight: 1.3,
-    ngramWeight: 0.8,
+    ngramWeight: 0.5,           // Reduced - n-grams unreliable across same language
     typoWeight: 1.2,
     rareWordWeight: 1.0,
     handoffWeight: 1.2,
-    ngramThresholdHigh: 0.98,
-    ngramThresholdMed: 0.96,
+    ngramThresholdHigh: 0.99,   // Raised
+    ngramThresholdMed: 0.98,    // Raised
     functionWordThresholdHigh: 0.94,
     functionWordThresholdMed: 0.88,
     confidenceMultiplier: 0.35,
@@ -98,12 +98,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 1.2,
     networkWeight: 1.0,
     functionWordWeight: 1.0,
-    ngramWeight: 1.2,
+    ngramWeight: 0.8,           // Reduced - n-grams have high same-language baseline
     typoWeight: 1.0,
     rareWordWeight: 1.2,
     handoffWeight: 1.0,
-    ngramThresholdHigh: 0.95,
-    ngramThresholdMed: 0.90,
+    ngramThresholdHigh: 0.98,   // Raised
+    ngramThresholdMed: 0.95,    // Raised
     functionWordThresholdHigh: 0.88,
     functionWordThresholdMed: 0.78,
     confidenceMultiplier: 0.45,
@@ -120,12 +120,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 0.8,
     networkWeight: 1.2,
     functionWordWeight: 0.8,
-    ngramWeight: 0.7,
+    ngramWeight: 0.5,           // Low - temporal mode doesn't rely on n-grams
     typoWeight: 0.8,
     rareWordWeight: 0.8,
     handoffWeight: 1.5,
-    ngramThresholdHigh: 0.97,
-    ngramThresholdMed: 0.94,
+    ngramThresholdHigh: 0.985,
+    ngramThresholdMed: 0.97,
     functionWordThresholdHigh: 0.92,
     functionWordThresholdMed: 0.85,
     confidenceMultiplier: 0.42,
@@ -133,7 +133,7 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
   },
   linguistic: {
     name: "Linguistic Focus",
-    description: "Emphasizes writing style - function words, n-grams, typos",
+    description: "Emphasizes writing style - function words, n-grams, typos. Calibrated to avoid same-language false positives.",
     minMessages: 25,
     minScoreToReport: 70,
     minStrongReasons: 2,
@@ -142,12 +142,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 1.0,
     networkWeight: 0.6,
     functionWordWeight: 1.5,
-    ngramWeight: 1.3,
+    ngramWeight: 0.8,           // Reduced - n-grams are language-level, not person-level
     typoWeight: 1.3,
     rareWordWeight: 1.2,
     handoffWeight: 0.7,
-    ngramThresholdHigh: 0.96,
-    ngramThresholdMed: 0.92,
+    ngramThresholdHigh: 0.985,  // Raised significantly
+    ngramThresholdMed: 0.97,    // Raised
     functionWordThresholdHigh: 0.90,
     functionWordThresholdMed: 0.82,
     confidenceMultiplier: 0.40,
@@ -164,68 +164,18 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 1.2, // Wurm has specific behavioral patterns
     networkWeight: 0.8,   // Less weight - people often don't interact in general chat
     functionWordWeight: 1.0,
-    ngramWeight: 1.0,
+    ngramWeight: 0.7,     // Reduced - English n-grams too uniform for person-level detection
     typoWeight: 1.1,
     rareWordWeight: 1.3,  // Important - Wurm-specific vocabulary
     handoffWeight: 1.3,   // Multiboxing/alt-switching is common
-    ngramThresholdHigh: 0.96,
-    ngramThresholdMed: 0.93,
+    ngramThresholdHigh: 0.985, // Raised - same-language speakers score ~0.94-0.97
+    ngramThresholdMed: 0.97,   // Raised
     functionWordThresholdHigh: 0.90,
     functionWordThresholdMed: 0.83,
     confidenceMultiplier: 0.42,
     confidenceBase: 11,
   },
 };
-
-// ============================================================================
-// WURM ONLINE SPECIFIC PATTERNS
-// ============================================================================
-
-// Wurm trade chat patterns - WTS/WTB/WTT/PC prefixes
-export const WURM_TRADE_PATTERNS = [
-  /^wts\b/i,   // Want to sell
-  /^wtb\b/i,   // Want to buy
-  /^wtt\b/i,   // Want to trade
-  /^pc\b/i,    // Price check
-];
-
-// Wurm-specific abbreviations that are fingerprinting
-export const WURM_ABBREVIATIONS = new Set([
-  "bsb",      // Bulk storage bin
-  "fsb",      // Food storage bin
-  "ql",       // Quality level
-  "coc",      // Circle of Cunning
-  "woa",      // Wind of Ages
-  "botd",     // Blessings of the Dark
-  "aosp",     // Aura of Shared Pain
-  "lt",       // Life Transfer
-  "nim",      // Nimbleness
-  "ms",       // Mindstealer
-  "fa",       // Flaming Aura
-  "fb",       // Frostbrand
-  "rt",       // Rotting Touch
-  "imp",      // Improve/improving
-  "ench",     // Enchant/enchantment
-  "sac",      // Sacrifice
-  "carp",     // Carpentry
-  "bc",       // Blacksmithing/body control
-  "ws",       // Weaponsmithing
-  "js",       // Jewelry smithing
-  "fc",       // Fine carpentry
-  "sc",       // Ship building / stone cutting
-  "nat",      // Natural substances
-  "hfc",      // Hot food cooking
-  "mb",       // Masonry/body strength
-]);
-
-// Wurm kingdom/server specific greetings
-export const WURM_KINGDOM_GREETINGS = [
-  "hots",     // Horde of the Summoned
-  "jk",       // Jenn-Kellon
-  "mr",       // Mol-Rehan
-  "bl",       // Blacklight
-  "wl",       // Whitelight
-];
 
 // STOP WORDS for analysis - common words to filter out
 export const STOP_WORDS = new Set([
@@ -340,144 +290,89 @@ export const COMMON_GAMING_WORDS = new Set([
   "quest", "mission", "event", "update", "patch", "buff", "nerf", "stats",
   "guild", "clan", "alliance", "team", "group", "party", "friend", "friends",
   "noob", "newbie", "veteran", "admin", "moderator", "owner",
-  // Common Wurm terms (everyone uses these)
-  "deed", "village", "kingdom", "priest", "horse", "cart", "boat", "ship",
-  "mine", "mining", "forge", "anvil", "skill", "improve", "improving", "quality",
-  "rare", "supreme", "fantastic", "drake", "scale", "troll", "unique",
-  "bulk", "crate", "wagon", "highway", "road", "bridge", "house", "building",
+  // Common game items/concepts (generic, not game-specific)
+  "horse", "cart", "boat", "ship", "house", "building",
   "wood", "iron", "steel", "silver", "gold", "copper", "stone", "rock",
-  "water", "food", "meat", "fish", "wheat", "cotton", "leather", "cloth",
-  // Wurm skills and actions (common gameplay vocabulary)
-  "faith", "favor", "prayer", "channeling", "exorcism", "preaching",
-  "casted", "casting", "enchant", "enchanted", "enchanting", "dispel",
-  "imping", "imped", "mending", "repairing", "repaired", "creating",
-  "digging", "flattening", "leveling", "paving", "planning", "building",
-  "chopping", "cutting", "woodcutting", "logging", "planting", "harvesting",
-  "sowing", "farming", "tending", "picking", "foraging", "botanizing",
-  "fishing", "cooking", "baking", "roasting", "butchering", "milking",
-  "taming", "breeding", "grooming", "leading", "hitching", "riding",
-  "sailing", "mooring", "embarking", "disembarking", "loading", "unloading",
-  "smithing", "smelting", "casting", "tempering", "sharpening", "polishing",
-  "masonry", "carpentry", "tailoring", "leatherworking", "pottery", "alchemy",
-  "meditation", "meditating", "fighting", "archery", "shielding", "healing",
-  "prospecting", "analyzing", "examining", "repairing", "lockpicking",
-  // Wurm items, resources, and materials
-  "potato", "potatoes", "garlic", "onion", "onions", "pumpkin", "pumpkins",
-  "corn", "barley", "oat", "oats", "rye", "wemp", "reed", "rice",
-  "strawberry", "blueberry", "raspberry", "lingonberry", "cherry", "lemon",
-  "olive", "olives", "grape", "grapes", "apple", "maple", "birch", "cedar",
-  "willow", "walnut", "chestnut", "linden", "lavender", "camellia", "oleander",
-  "rose", "acorn", "hazelnut", "nutmeg", "fennel", "ginger", "basil",
-  "oregano", "parsley", "rosemary", "thyme", "sage", "cumin", "paprika",
-  "turmeric", "sassafras", "lovage", "nettles",
-  "plank", "planks", "shaft", "shafts", "brick", "bricks", "mortar",
-  "concrete", "slate", "marble", "sandstone", "pottery", "clay",
-  "lump", "lumps", "ribbon", "string", "rope", "chain", "rivet",
-  "nails", "fence", "fences", "gate", "gates", "door", "floor",
-  "oven", "kiln", "campfire", "fireplace", "still", "cauldron",
-  "needle", "spindle", "loom", "grindstone", "whetstone",
-  "pickaxe", "shovel", "hatchet", "hammer", "mallet", "chisel",
-  "rake", "scythe", "sickle", "trowel", "knife", "saw", "file",
-  "longsword", "shortsword", "twohander", "spear", "halberd", "shield",
-  "staff", "scepter", "statuette", "altar", "coffin", "fountain",
-  "lamp", "torch", "lantern", "candelabra", "brazier",
-  "saddle", "horseshoe", "bridle", "barding",
-  "rowboat", "sailboat", "corbita", "cog", "knarr", "caravel",
-  "dredge", "anchor", "mooring",
-  "backpack", "satchel", "knapsack", "quiver", "toolbelt",
-  "barrel", "bucket", "flask", "jar", "bowl", "plate", "cup",
-  "pelt", "hide", "fleece", "wool", "fur",
-  "zinc", "tin", "lead", "bronze", "brass", "electrum", "adamantine",
-  "glimmersteel", "seryll", "moonmetal",
-  // Wurm creatures and mobs
-  "spider", "scorpion", "goblin", "crocodile", "anaconda",
-  "hellhound", "hellhorse", "lava", "fiend", "dragon", "hatchling",
-  "unicorn", "bison", "deer", "pheasant", "rooster", "chicken", "hen",
-  "cattle", "bull", "calf", "sheep", "lamb", "pig", "dog", "cat",
-  "wolf", "bear", "lion", "gorilla", "hyena", "jackal", "cobra",
-  // Wurm enchantments and spells
-  "nimbleness", "mindstealer", "frostbrand", "flaming", "venom",
-  "rotting", "lifetransfer", "lurker", "opulence", "demise",
-  "blessing", "aura", "genesis", "strongwall", "charm",
-  "courier", "dark", "messenger", "reveal",
-  // Wurm game mechanics terms
-  "wurm", "karma", "sleep", "bonus", "affinity", "affinities",
-  "stamina", "nutrition", "thirst", "alignment", "reputation",
-  "favor", "difficulty", "timer", "cooldown", "decay",
-  "damage", "quality", "weight", "volume", "temperature",
-  "premium", "trader", "merchant", "token", "upkeep", "coffers",
-  "highway", "catseye", "waystone", "mailbox", "spirit",
-  "guard", "guards", "tower", "lighthouse", "colossus",
-  "rift", "source", "crystal", "fragment", "journal",
-  "terraforming", "flattening", "leveling", "surface",
-  "underground", "reinforced", "collapsed", "ceiling",
-  "perimeter", "border", "tile", "tiles", "slope",
-  // Server names and common places
-  "harmony", "melody", "cadence", "independence", "deliverance", "exodus",
-  "celebration", "xanadu", "pristine", "release", "defiance", "chaos", "elevation",
+  "water", "food", "meat", "fish", "leather", "cloth",
+  "highway", "road", "bridge", "door", "floor", "gate",
+  "quality", "damage", "weight", "volume", "temperature",
+  "timer", "cooldown", "decay", "bonus", "stamina",
+  "guard", "guards", "tower",
+  // Common English words that falsely appear as "rare" in small groups
+  // These are normal vocabulary, not stylistic fingerprints
+  "recall", "stance", "drive", "window", "control", "recipe",
+  "manage", "option", "handle", "assume", "afford", "avoid",
+  "blame", "claim", "confirm", "convince", "defeat", "defend",
+  "delay", "deliver", "demand", "detect", "discuss", "display",
+  "divide", "enable", "engage", "ensure", "escape", "evolve",
+  "expand", "expose", "extend", "focus", "ignore", "impose",
+  "invest", "involve", "judge", "launch", "limit", "locate",
+  "obtain", "oppose", "perform", "permit", "phrase", "prefer",
+  "preserve", "prevent", "process", "produce", "promote", "protect",
+  "prove", "pursue", "quote", "reduce", "refer", "reflect",
+  "reform", "refuse", "reject", "relate", "relief", "rely",
+  "remove", "repeat", "replace", "report", "request", "require",
+  "resolve", "respond", "restore", "reveal", "review", "reward",
+  "rotate", "secure", "select", "settle", "signal", "solve",
+  "spread", "submit", "succeed", "supply", "support", "survive",
+  "suspect", "switch", "target", "threat", "transfer", "trigger",
+  "update", "volume", "comment", "device", "effect", "effort",
+  "energy", "engine", "figure", "growth", "impact", "income",
+  "method", "normal", "period", "pocket", "profit", "result",
+  "safety", "screen", "search", "season", "sector", "speech",
+  "status", "stress", "strike", "supply", "symbol", "talent",
+  "theory", "threat", "tissue", "travel", "vision", "wealth",
+  // Gaming peripherals / hardware terms (not fingerprinting)
+  "hotas", "mouse", "keyboard", "joystick", "throttle", "pedals",
+  "monitor", "headset", "controller", "gamepad", "setup", "config",
 ]);
 
-// Wurm-specific terminology
-export const WURM_TERMS = [
-  "deed", "village", "alliance", "kingdom",
-  "kos", "templars", "highway", "rift", "unique",
-  "priest", "vyn", "mag", "fo", "lib", "nahjo",
-  "drake", "scale", "rare", "supreme", "fantastic",
-  "terraform", "mine", "forge", "imp", "improving",
-  "channeling", "prayer", "benediction", "sermon",
-  "pvp", "pve", "defiance", "chaos", "elevation",
-  "independence", "deliverance", "exodus", "celebration",
-  "xanadu", "pristine", "release", "harmony", "melody", "cadence",
-  "troll", "dragon", "goblin", "spider", "hell", "valrei",
-  "wurm", "karma", "sleep", "bonus", "affinity",
-  "bulk", "bsb", "fsb", "crate", "wagon", "knarr",
-  "corbita", "caravel", "sailboat", "rowboat",
-  "longsword", "shortsword", "maul", "axe", "pickaxe",
-  "shovel", "rake", "scythe", "sickle", "hammer",
-];
+/**
+ * Build a merged set of common words for a game profile.
+ * Combines the global COMMON_GAMING_WORDS with game-specific words.
+ */
+export function buildCommonWordsForGame(gameCommonWords: string[]): Set<string> {
+  const merged = new Set(COMMON_GAMING_WORDS);
+  for (const w of gameCommonWords) {
+    merged.add(w);
+  }
+  return merged;
+}
 
-// Common short responses that should be ignored in similarity analysis
-export const WURM_COMMON_RESPONSES = new Set([
-  "ok", "ty", "thx", "thanks", "np", "yw", "yes", "no", "yeah", "yep",
-  "nope", "sure", "done", "nice", "cool", "lol", "haha", "xd",
-  "gl", "gj", "gz", "gratz", "wb", "brb", "afk", "back",
-]);
-
-// Wurm-specific topic words for fingerprinting
+// Generic topic words for fingerprinting (game-agnostic)
 export const TOPIC_WORDS = [
-  "deed", "village", "kingdom", "pvp", "pve", "skill", "grind",
-  "horse", "cart", "boat", "ship", "mine", "forge", "anvil",
-  "weapon", "armor", "shield", "sword", "axe", "maul",
-  "priest", "mag", "vyn", "fo", "lib", "channeling", "prayer",
-  "drake", "scale", "rare", "supreme", "fantastic",
-  "newbie", "noob", "vet", "veteran", "old", "new",
+  "skill", "grind", "weapon", "armor", "shield",
+  "newbie", "noob", "veteran",
   "help", "need", "want", "sell", "buy", "trade", "price",
   "lag", "bug", "fix", "dev", "update", "patch",
   "alliance", "enemy", "friend", "war", "peace",
-  "troll", "dragon", "unique", "rift", "valrei",
 ];
 
-// Typo patterns to detect
-export const TYPO_CHECKS = [
-  { pattern: /\bteh\b/g, label: "teh->the" },
-  { pattern: /\bthier\b/g, label: "thier->their" },
-  { pattern: /\byuo\b/g, label: "yuo->you" },
-  { pattern: /\bwaht\b/g, label: "waht->what" },
-  { pattern: /\btaht\b/g, label: "taht->that" },
-  { pattern: /\bhte\b/g, label: "hte->the" },
-  { pattern: /\bwith\b/g, label: "wiht->with" },
-  { pattern: /\balot\b/g, label: "alot" },
-  { pattern: /\bdefinately\b/g, label: "definately" },
-  { pattern: /\brecieve\b/g, label: "recieve" },
-  { pattern: /\boccured\b/g, label: "occured" },
-  { pattern: /\buntill\b/g, label: "untill" },
-  { pattern: /\bwich\b/g, label: "wich->which" },
-  { pattern: /\bbeacuse\b/g, label: "beacuse" },
-  { pattern: /\bfreind\b/g, label: "freind" },
-  { pattern: /\bgoverment\b/g, label: "goverment" },
-  { pattern: /\bgrammer\b/g, label: "grammer" },
-  // Double letters
-  { pattern: /([a-z])\1{2,}/g, label: "triple-letters" },
+// Typo patterns with commonality flag.
+// "common" typos are made by many casual English typists and have low
+// discriminative power for identifying individuals. Only "distinctive"
+// (common: false) typos are strong fingerprints.
+export const TYPO_CHECKS: { pattern: RegExp; label: string; common: boolean }[] = [
+  // Common typos - most casual English speakers make these
+  { pattern: /\bteh\b/g, label: "teh->the", common: true },
+  { pattern: /\bhte\b/g, label: "hte->the", common: true },
+  { pattern: /\bwiht\b/g, label: "wiht->with", common: true },
+  { pattern: /\balot\b/g, label: "alot", common: true },
+  { pattern: /\byuo\b/g, label: "yuo->you", common: true },
+  { pattern: /\bwaht\b/g, label: "waht->what", common: true },
+  { pattern: /\btaht\b/g, label: "taht->that", common: true },
+  { pattern: /([a-z])\1{2,}/g, label: "triple-letters", common: true },
+  // Distinctive typos - these indicate individual spelling habits
+  { pattern: /\bthier\b/g, label: "thier->their", common: false },
+  { pattern: /\bdefinately\b/g, label: "definately", common: false },
+  { pattern: /\brecieve\b/g, label: "recieve", common: false },
+  { pattern: /\boccured\b/g, label: "occured", common: false },
+  { pattern: /\buntill\b/g, label: "untill", common: false },
+  { pattern: /\bwich\b/g, label: "wich->which", common: false },
+  { pattern: /\bbeacuse\b/g, label: "beacuse", common: false },
+  { pattern: /\bfreind\b/g, label: "freind", common: false },
+  { pattern: /\bgoverment\b/g, label: "goverment", common: false },
+  { pattern: /\bgrammer\b/g, label: "grammer", common: false },
 ];
 
 // Letter substitution patterns (txtspk)

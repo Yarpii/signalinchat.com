@@ -8,6 +8,7 @@ import { analyzePlayerAdvanced } from "@/lib/playerAnalysis";
 import { detectAltsAdvanced } from "@/lib/altDetection";
 import { ALGORITHM_CONFIGS, type AlgorithmMode } from "@/lib/constants";
 import { exportPlayerChat, exportPlayerChatHTML, exportFullReportJSON, exportSummaryHTML } from "@/lib/export";
+import { getAvailableProfiles, getGameProfile, type GameProfile } from "@/lib/gameProfiles";
 
 // ============================================================================
 // REACT COMPONENT
@@ -21,7 +22,10 @@ export default function AnalyzerPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [compareMode, setCompareMode] = useState<[string, string] | null>(null);
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>("balanced");
+  const [selectedGameId, setSelectedGameId] = useState("wurm");
   const [exportOpen, setExportOpen] = useState(false);
+  const gameProfile = useMemo(() => getGameProfile(selectedGameId), [selectedGameId]);
+  const availableProfiles = useMemo(() => getAvailableProfiles(), []);
   const exportRef = useRef<HTMLDivElement>(null);
 
   // Close export dropdown when clicking outside
@@ -43,8 +47,8 @@ export default function AnalyzerPage() {
   }, [messages]);
 
   const playerStats = useMemo(() => {
-    return players.map(p => analyzePlayerAdvanced(p, messages, players));
-  }, [players, messages]);
+    return players.map(p => analyzePlayerAdvanced(p, messages, players, gameProfile));
+  }, [players, messages, gameProfile]);
 
   const { altSuspicions, similarityMatrix, activeConfig, socialInsights, slipPatterns } = useMemo(() => {
     if (playerStats.length < 2) {
@@ -88,18 +92,18 @@ export default function AnalyzerPage() {
   }, []);
 
   const parseSingleChat = useCallback((text: string) => {
-    const parsed = parseChat(text, 0);
+    const parsed = parseChat(text, 0, gameProfile);
     setMessages(parsed);
     setSelectedPlayers([]);
     setCompareMode(null);
-  }, []);
+  }, [gameProfile]);
 
   const parseMultipleChatsHandler = useCallback((texts: string[]) => {
-    const allMessages = parseMultipleChats(texts);
+    const allMessages = parseMultipleChats(texts, gameProfile);
     setMessages(allMessages);
     setSelectedPlayers([]);
     setCompareMode(null);
-  }, []);
+  }, [gameProfile]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -172,6 +176,34 @@ export default function AnalyzerPage() {
           </div>
         </div>
 
+        {/* Game Selector */}
+        <div className="bg-bg-secondary rounded-xl border border-border p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm font-medium text-text-secondary">Game:</label>
+            <div className="flex gap-2">
+              {availableProfiles.map((profile) => (
+                <button
+                  key={profile.id}
+                  onClick={() => setSelectedGameId(profile.id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedGameId === profile.id
+                      ? "bg-accent text-white shadow-lg shadow-accent/25"
+                      : "bg-bg-tertiary text-text-secondary hover:bg-bg-tertiary/80 border border-border"
+                  }`}
+                >
+                  {profile.name}
+                  {profile.status === "live" && selectedGameId === profile.id && (
+                    <span className="ml-2 w-2 h-2 bg-success rounded-full inline-block" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-text-muted ml-auto hidden sm:block">
+              {gameProfile.description}
+            </span>
+          </div>
+        </div>
+
         {/* Upload Section */}
         <div className="bg-bg-secondary rounded-xl border border-border p-6 mb-6">
           <h2 className="text-lg font-semibold text-text-primary mb-4">Import Chat Log</h2>
@@ -194,7 +226,7 @@ export default function AnalyzerPage() {
                 <textarea
                   value={rawText}
                   onChange={(e) => setRawText(e.target.value)}
-                  placeholder="[21:25:05] <PlayerName> hey everyone whats up..."
+                  placeholder={gameProfile.chatFormatHint}
                   className="flex-1 px-4 py-2 bg-bg-tertiary rounded-lg text-text-primary border border-border resize-none h-10"
                 />
                 <button

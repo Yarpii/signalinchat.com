@@ -149,7 +149,8 @@ function Footer() {
             </h3>
             <ul className="space-y-2 text-sm text-text-secondary">
               <li>Wurm Online</li>
-              <li className="text-text-muted">More coming soon...</li>
+              <li>Generic / Other</li>
+              <li className="text-text-muted">More games coming soon...</li>
             </ul>
           </div>
         </div>

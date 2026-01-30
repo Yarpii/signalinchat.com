@@ -24,7 +24,8 @@ import {
   detectFarewellStyle,
   extractCommonEnders,
 } from "./linguistic";
-import { extractTopicFingerprint, findResponsePartners, findMentionedPlayers, extractCommonWords, extractCommonPhrases, extractWurmTopics } from "./behavioral";
+import { extractTopicFingerprint, findResponsePartners, findMentionedPlayers, extractCommonWords, extractCommonPhrases, extractGameTopics } from "./behavioral";
+import type { GameProfile } from "./gameProfiles";
 
 /**
  * Analyze a player and build comprehensive stats
@@ -32,7 +33,8 @@ import { extractTopicFingerprint, findResponsePartners, findMentionedPlayers, ex
 export function analyzePlayerAdvanced(
   name: string,
   messages: ChatMessage[],
-  allPlayers: string[]
+  allPlayers: string[],
+  gameProfile?: GameProfile
 ): AdvancedPlayerStats {
   const playerMessages = messages.filter(m => m.player === name);
   const texts = playerMessages.map(m => m.message);
@@ -142,7 +144,8 @@ export function analyzePlayerAdvanced(
     responsePartners: findResponsePartners(name, messages),
     mentionedPlayers: findMentionedPlayers(texts, allPlayers),
     topicFingerprint: extractTopicFingerprint(texts),
-    wurmTopics: extractWurmTopics(texts),
+    gameTopics: extractGameTopics(texts, gameProfile?.gameTerms || []),
+    wurmTopics: extractGameTopics(texts, gameProfile?.gameTerms || []),
 
     allMessages: texts,
     messageTimes,

@@ -183,6 +183,13 @@ export default function DocsPage() {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 bg-info/10 border border-info/30 rounded-lg p-4 text-sm">
+            <strong className="text-info">Game Profiles:</strong>
+            <span className="text-text-secondary ml-2">
+              Use the game selector at the top of the analyzer to load game-specific vocabulary,
+              system player filters, and optimized settings. Currently supported: Wurm Online, Generic/Other.
+            </span>
+          </div>
         </section>
 
         {/* Limitations */}
