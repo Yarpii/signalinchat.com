@@ -53,12 +53,12 @@ export default function GameAnalyzerPage() {
   }, [exportOpen]);
 
   const players = useMemo(() => {
-    const playerSet = new Set(messages.map(m => m.player));
+    const playerSet = new Set(messages.map((m: ChatMessage) => m.player));
     return Array.from(playerSet).sort();
   }, [messages]);
 
   const playerStats = useMemo(() => {
-    return players.map(p => analyzePlayerAdvanced(p, messages, players, gameProfile));
+    return players.map((p: string) => analyzePlayerAdvanced(p, messages, players, gameProfile));
   }, [players, messages, gameProfile]);
 
   const { altSuspicions, similarityMatrix, activeConfig, socialInsights, slipPatterns } = useMemo(() => {
@@ -84,11 +84,11 @@ export default function GameAnalyzerPage() {
   const filteredMessages = useMemo(() => {
     let filtered = messages;
     if (selectedPlayers.length > 0) {
-      filtered = filtered.filter(m => selectedPlayers.includes(m.player));
+      filtered = filtered.filter((m: ChatMessage) => selectedPlayers.includes(m.player));
     }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(m =>
+      filtered = filtered.filter((m: ChatMessage) =>
         m.message.toLowerCase().includes(term) ||
         m.player.toLowerCase().includes(term)
       );
@@ -97,8 +97,8 @@ export default function GameAnalyzerPage() {
   }, [messages, selectedPlayers, searchTerm]);
 
   const togglePlayer = useCallback((player: string) => {
-    setSelectedPlayers(prev =>
-      prev.includes(player) ? prev.filter(p => p !== player) : [...prev, player]
+    setSelectedPlayers((prev: string[]) =>
+      prev.includes(player) ? prev.filter((p: string) => p !== player) : [...prev, player]
     );
   }, []);
 
@@ -156,8 +156,8 @@ export default function GameAnalyzerPage() {
 
   const getCompareStats = useMemo(() => {
     if (!compareMode) return null;
-    const s1 = playerStats.find(s => s.name === compareMode[0]);
-    const s2 = playerStats.find(s => s.name === compareMode[1]);
+    const s1 = playerStats.find((s: AdvancedPlayerStats) => s.name === compareMode[0]);
+    const s2 = playerStats.find((s: AdvancedPlayerStats) => s.name === compareMode[1]);
     return s1 && s2 ? [s1, s2] as [AdvancedPlayerStats, AdvancedPlayerStats] : null;
   }, [compareMode, playerStats]);
 
@@ -238,7 +238,7 @@ export default function GameAnalyzerPage() {
               <div className="flex gap-2">
                 <textarea
                   value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRawText(e.target.value)}
                   placeholder={gameProfile.chatFormatHint}
                   className="flex-1 px-4 py-2 bg-bg-tertiary rounded-lg text-text-primary border border-border resize-none h-10"
                 />
@@ -260,7 +260,7 @@ export default function GameAnalyzerPage() {
                   <label className="text-sm text-text-secondary">Algorithm:</label>
                   <select
                     value={algorithmMode}
-                    onChange={(e) => setAlgorithmMode(e.target.value as AlgorithmMode)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setAlgorithmMode(e.target.value as AlgorithmMode)}
                     className="px-3 py-1.5 bg-bg-tertiary rounded-lg text-text-primary border border-border text-sm"
                   >
                     {(Object.keys(ALGORITHM_CONFIGS) as AlgorithmMode[]).map((mode) => (
@@ -286,16 +286,16 @@ export default function GameAnalyzerPage() {
                 {players.length} players
               </span>
               <span className="px-3 py-1 bg-info/20 text-info rounded-full">
-                {Math.max(...messages.map(m => m.dayIndex)) + 1} day(s)
+                {Math.max(...messages.map((m: ChatMessage) => m.dayIndex)) + 1} day(s)
               </span>
-              {altSuspicions.filter(s => s.category === "critical").length > 0 && (
+              {altSuspicions.filter((s: AltSuspicion) => s.category === "critical").length > 0 && (
                 <span className="px-3 py-1 bg-error/20 text-error rounded-full font-semibold">
-                  {altSuspicions.filter(s => s.category === "critical").length} strong similarities
+                  {altSuspicions.filter((s: AltSuspicion) => s.category === "critical").length} strong similarities
                 </span>
               )}
-              {altSuspicions.filter(s => s.category === "high").length > 0 && (
+              {altSuspicions.filter((s: AltSuspicion) => s.category === "high").length > 0 && (
                 <span className="px-3 py-1 bg-warning/20 text-warning rounded-full">
-                  {altSuspicions.filter(s => s.category === "high").length} notable similarities
+                  {altSuspicions.filter((s: AltSuspicion) => s.category === "high").length} notable similarities
                 </span>
               )}
 
@@ -477,7 +477,7 @@ function ChatTab({
             type="text"
             placeholder="Search messages..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-2 bg-bg-tertiary rounded-lg text-text-primary border border-border"
           />
         </div>
@@ -723,7 +723,7 @@ function AltsTab({
   if (altSuspicions.length === 0) {
     return (
       <div className="bg-bg-secondary rounded-xl border border-border p-8 text-center">
-        <div className="text-4xl mb-4">&#128373;</div>
+        <svg className="w-10 h-10 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <h3 className="text-lg font-semibold text-text-primary mb-2">
           No notable similarities found
         </h3>
@@ -829,7 +829,7 @@ function AltSuspicionCard({
 
       <details className="group">
         <summary className="cursor-pointer text-sm text-text-secondary hover:text-text-primary mb-2">
-          View all {suspicion.reasons.length} reasons...
+          Show detailed analysis ({suspicion.reasons.length} factors)
         </summary>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
           {suspicion.reasons.map((reason, i) => (
@@ -883,13 +883,13 @@ function AltSuspicionCard({
           onClick={() => { setSelectedPlayers([suspicion.player1, suspicion.player2]); setActiveTab("chat"); }}
           className="px-3 py-1 bg-info/20 text-info rounded-lg text-sm hover:bg-info/30"
         >
-          View Both
+          Compare messages
         </button>
         <button
           onClick={() => { setCompareMode([suspicion.player1, suspicion.player2]); setActiveTab("forensics"); }}
           className="px-3 py-1 bg-accent/20 text-accent rounded-lg text-sm hover:bg-accent/30"
         >
-          Compare in Lab
+          Forensic comparison
         </button>
       </div>
     </div>
@@ -1054,7 +1054,7 @@ function SocialTab({
   if (socialInsights.length === 0 && slipPatterns.length === 0) {
     return (
       <div className="bg-bg-secondary rounded-xl border border-border p-8 text-center">
-        <div className="text-4xl mb-4">&#128101;</div>
+        <svg className="w-10 h-10 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
         <h3 className="text-lg font-semibold text-text-primary mb-2">No social patterns detected</h3>
         <p className="text-text-secondary">
           No conflicts, self-talk, or typing inconsistencies found.
@@ -1148,7 +1148,7 @@ function SocialTab({
               </div>
               <div className="mt-3">
                 <button onClick={() => { setSelectedPlayers([slip.playerName]); setActiveTab("chat"); }} className="px-3 py-1 bg-bg-tertiary rounded-lg text-text-secondary text-sm hover:bg-bg-tertiary/80">
-                  View messages
+                  Review messages
                 </button>
               </div>
             </div>
@@ -1186,18 +1186,18 @@ function ForensicsTab({
         <div className="grid grid-cols-2 gap-4 mb-4">
           <select
             value={compareMode?.[0] || ""}
-            onChange={(e) => setCompareMode([e.target.value, compareMode?.[1] || ""])}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCompareMode([e.target.value, compareMode?.[1] || ""])}
             className="px-4 py-2 bg-bg-tertiary rounded-lg text-text-primary border border-border"
           >
-            <option value="">Select player 1</option>
+            <option value="">Select account 1</option>
             {players.map(p => (<option key={p} value={p}>{p}</option>))}
           </select>
           <select
             value={compareMode?.[1] || ""}
-            onChange={(e) => setCompareMode([compareMode?.[0] || "", e.target.value])}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCompareMode([compareMode?.[0] || "", e.target.value])}
             className="px-4 py-2 bg-bg-tertiary rounded-lg text-text-primary border border-border"
           >
-            <option value="">Select player 2</option>
+            <option value="">Select account 2</option>
             {players.map(p => (<option key={p} value={p}>{p}</option>))}
           </select>
         </div>
@@ -1213,8 +1213,8 @@ function ForensicsTab({
 
       {!getCompareStats && (
         <div className="bg-bg-secondary rounded-xl border border-border p-8 text-center">
-          <div className="text-4xl mb-4">&#128300;</div>
-          <p className="text-text-secondary">Select two players to compare</p>
+          <svg className="w-10 h-10 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+          <p className="text-text-secondary">Select two accounts to begin forensic comparison</p>
         </div>
       )}
     </div>
@@ -1299,7 +1299,7 @@ function ForensicsPlayerCard({ stats, otherStats }: { stats: AdvancedPlayerStats
 function EmptyState() {
   return (
     <div className="bg-bg-secondary rounded-xl border border-border p-12 text-center">
-      <div className="text-6xl mb-4">&#128172;</div>
+      <svg className="w-12 h-12 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
       <h2 className="text-xl font-semibold text-text-primary mb-2">Upload a chat log to begin</h2>
       <p className="text-text-secondary mb-4">Supported format: [HH:MM:SS] &lt;PlayerName&gt; message</p>
       <div className="bg-bg-tertiary rounded-lg p-4 text-left font-mono text-sm max-w-md mx-auto">

@@ -230,7 +230,7 @@ export default function HomePage() {
             <StepCard
               number="2"
               title="Automatic Analysis"
-              description="The engine runs 6 analysis categories: temporal, linguistic, behavioral, network, rare words, and social patterns. Choose from 6 algorithm modes."
+              description="The engine runs 6 analysis categories: temporal, linguistic, behavioral, network, shared unique vocabulary, and social patterns. Choose from 6 algorithm modes."
             />
             <StepCard
               number="3"

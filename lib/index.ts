@@ -42,12 +42,6 @@ export {
   type AlgorithmConfig,
 } from "./constants";
 
-// Word frequency dictionary
-export {
-  COMMON_ENGLISH_WORDS,
-  isCommonEnglishWord,
-} from "./wordFrequency";
-
 // Game profiles
 export {
   GAME_PROFILES,
