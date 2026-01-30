@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.signalinchat.com";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.signalinchat.com"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Signal In Chat - Game Chat Intelligence Platform",
     template: "%s | Signal In Chat",
