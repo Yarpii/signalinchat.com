@@ -2,25 +2,27 @@ import type { MetadataRoute } from "next";
 
 export const dynamic = "force-static";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.signalinchat.com";
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://www.signalinchat.com";
   const lastModified = new Date();
 
   return [
     {
-      url: `${baseUrl}/`,
+      url: `${siteUrl}/`,
       lastModified,
       changeFrequency: "weekly",
       priority: 1,
     },
     {
-      url: `${baseUrl}/analyzer`,
+      url: `${siteUrl}/analyzer`,
       lastModified,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/analyzer/docs`,
+      url: `${siteUrl}/analyzer/docs`,
       lastModified,
       changeFrequency: "monthly",
       priority: 0.7,
