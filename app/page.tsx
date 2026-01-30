@@ -13,7 +13,7 @@ export default function HomePage() {
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/20 rounded-full text-accent text-sm mb-8">
               <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-              Multi-game support — select your game in the analyzer
+              Multi-game support — select your game to get started
             </div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-text-primary mb-6 leading-tight">
@@ -256,89 +256,52 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden">
+            <a href="/analyzer/wurm" className="bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden hover:border-accent/50 hover:-translate-y-1 transition-all group">
               <div className="absolute top-3 right-3 px-2 py-1 bg-success/20 text-success text-xs rounded font-semibold">
                 LIVE
               </div>
-              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-accent"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"
-                  />
+              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-accent/20 transition-colors">
+                <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-text-primary mb-2">
-                Wurm Online
-              </h3>
+              <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors">Wurm Online</h3>
               <p className="text-text-secondary text-sm">
                 Full support including 100+ Wurm-specific abbreviations,
                 terminology, and optimized detection mode.
               </p>
-            </div>
+            </a>
 
-            <div className="bg-bg-secondary rounded-2xl border border-border/50 p-8 text-center opacity-60">
-              <div className="absolute top-3 right-3 px-2 py-1 bg-warning/20 text-warning text-xs rounded font-semibold">
-                COMING SOON
+            <div className="bg-bg-secondary rounded-2xl border border-border/50 p-8 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-bg-primary/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                <span className="px-4 py-2 bg-warning/15 border border-warning/30 text-warning text-sm font-semibold rounded-full">COMING SOON</span>
               </div>
               <div className="w-16 h-16 bg-bg-tertiary rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-text-muted"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
+                <svg className="w-8 h-8 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-text-primary mb-2">
-                Discord
-              </h3>
+              <h3 className="text-xl font-bold text-text-primary mb-2">Discord</h3>
               <p className="text-text-secondary text-sm">
-                Analyze exported Discord server chat logs for the same forensic
-                patterns.
+                Analyze exported Discord server chat logs for the same forensic patterns.
               </p>
             </div>
 
-            <div className="bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden">
+            <a href="/analyzer/generic" className="bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden hover:border-accent/50 hover:-translate-y-1 transition-all group">
               <div className="absolute top-3 right-3 px-2 py-1 bg-success/20 text-success text-xs rounded font-semibold">
                 LIVE
               </div>
-              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-8 h-8 text-accent"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"
-                  />
+              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-accent/20 transition-colors">
+                <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-text-primary mb-2">
-                Generic / Other
-              </h3>
+              <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors">Generic / Other</h3>
               <p className="text-text-secondary text-sm">
                 Any timestamped chat format. Works with any game — no
                 game-specific vocabulary required.
               </p>
-            </div>
+            </a>
           </div>
         </div>
       </section>
