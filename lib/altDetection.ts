@@ -280,8 +280,10 @@ export function detectAltsAdvanced(
       const brunetsWDiff = Math.abs(p1.brunetsW - p2.brunetsW);
       const yulesKDiff = Math.abs(p1.yulesK - p2.yulesK);
 
-      // All three metrics should be similar for same author
-      if (simpsonsDiff < 0.01 && brunetsWDiff < 1 && yulesKDiff < 20) {
+      // All three metrics should be similar for same author.
+      // Note: casual English chat has a fairly narrow range for these metrics,
+      // so thresholds must be tight to avoid flagging normal same-language speakers.
+      if (simpsonsDiff < 0.005 && brunetsWDiff < 0.5 && yulesKDiff < 10) {
         const baseScore = 20;
         const weightedScore = Math.round(baseScore * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -291,7 +293,7 @@ export function detectAltsAdvanced(
           weight: weightedScore,
           evidence: `Simpson's D: ${simpsonsDiff.toFixed(3)} diff, Brunet's W: ${brunetsWDiff.toFixed(1)} diff, Yule's K: ${yulesKDiff.toFixed(0)} diff`,
         });
-      } else if (simpsonsDiff < 0.02 && brunetsWDiff < 2 && yulesKDiff < 40) {
+      } else if (simpsonsDiff < 0.01 && brunetsWDiff < 1 && yulesKDiff < 20) {
         const baseScore = 10;
         const weightedScore = Math.round(baseScore * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;

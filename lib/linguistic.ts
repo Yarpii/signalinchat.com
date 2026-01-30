@@ -537,16 +537,20 @@ export function extractCommonEnders(messages: string[]): string[] {
  * Compare function word profiles - returns similarity score 0-1
  */
 export function compareFunctionWordProfiles(p1: FunctionWordProfile, p2: FunctionWordProfile): number {
+  // Focus on features that actually differentiate individuals within the same language.
+  // Articles, prepositions, auxiliaries are very uniform across English speakers,
+  // so they get LOW weight. Personal style markers (iVsWe, butVsAnd, questionMarks,
+  // pronouns) vary more between individuals and get HIGH weight.
   const weights = {
-    articles: 1.0,
+    articles: 0.3,       // Very uniform in English - low discriminative power
     pronouns: 1.5,
-    prepositions: 1.2,
-    conjunctions: 1.3,
-    auxiliaries: 1.0,
-    quantifiers: 0.8,
-    iVsWe: 1.5,
-    butVsAnd: 1.2,
-    questionMarks: 1.0,
+    prepositions: 0.4,   // Very uniform in English - low discriminative power
+    conjunctions: 0.8,
+    auxiliaries: 0.3,    // Very uniform in English - low discriminative power
+    quantifiers: 0.6,
+    iVsWe: 2.0,          // Strong personal style marker
+    butVsAnd: 1.5,       // Personal argumentation style
+    questionMarks: 1.2,  // Personal interaction style
   };
 
   let totalDiff = 0;
@@ -564,7 +568,16 @@ export function compareFunctionWordProfiles(p1: FunctionWordProfile, p2: Functio
 
   // Convert to similarity (1 = identical, 0 = very different)
   const avgDiff = totalDiff / totalWeight;
-  return Math.max(0, 1 - avgDiff);
+  // Apply baseline penalty: typical same-language speakers already score ~0.75-0.85
+  // similarity on function words. Rescale so that baseline similarity maps to ~0.5
+  // and only truly distinctive matches score high.
+  const rawSimilarity = Math.max(0, 1 - avgDiff);
+  const BASELINE = 0.78; // Expected similarity between random English speakers
+  if (rawSimilarity <= BASELINE) {
+    return rawSimilarity * 0.5 / BASELINE; // Map 0..baseline -> 0..0.5
+  }
+  // Map baseline..1.0 -> 0.5..1.0
+  return 0.5 + (rawSimilarity - BASELINE) * 0.5 / (1.0 - BASELINE);
 }
 
 /**

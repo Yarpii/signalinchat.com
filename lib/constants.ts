@@ -44,8 +44,8 @@ export interface AlgorithmConfig {
 
 export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
   balanced: {
-    name: "Balanced (v4.0)",
-    description: "Default algorithm with good accuracy and low false positives",
+    name: "Balanced (v4.2)",
+    description: "Default algorithm with good accuracy and low false positives. Tuned to reduce false positives for same-language speakers.",
     minMessages: 20,
     minScoreToReport: 70,
     minStrongReasons: 2,
@@ -54,12 +54,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 1.0,
     networkWeight: 1.0,
     functionWordWeight: 1.0,
-    ngramWeight: 1.0,
+    ngramWeight: 0.7,           // Reduced - n-grams are language-dependent, not person-dependent
     typoWeight: 1.0,
     rareWordWeight: 1.0,
     handoffWeight: 1.0,
-    ngramThresholdHigh: 0.97,
-    ngramThresholdMed: 0.94,
+    ngramThresholdHigh: 0.985,  // Raised - same-language speakers already score ~0.94-0.97
+    ngramThresholdMed: 0.97,    // Raised
     functionWordThresholdHigh: 0.92,
     functionWordThresholdMed: 0.85,
     confidenceMultiplier: 0.40,
@@ -76,12 +76,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 0.8,
     networkWeight: 0.5,
     functionWordWeight: 1.3,
-    ngramWeight: 0.8,
+    ngramWeight: 0.5,           // Reduced - n-grams unreliable across same language
     typoWeight: 1.2,
     rareWordWeight: 1.0,
     handoffWeight: 1.2,
-    ngramThresholdHigh: 0.98,
-    ngramThresholdMed: 0.96,
+    ngramThresholdHigh: 0.99,   // Raised
+    ngramThresholdMed: 0.98,    // Raised
     functionWordThresholdHigh: 0.94,
     functionWordThresholdMed: 0.88,
     confidenceMultiplier: 0.35,
@@ -98,12 +98,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 1.2,
     networkWeight: 1.0,
     functionWordWeight: 1.0,
-    ngramWeight: 1.2,
+    ngramWeight: 0.8,           // Reduced - n-grams have high same-language baseline
     typoWeight: 1.0,
     rareWordWeight: 1.2,
     handoffWeight: 1.0,
-    ngramThresholdHigh: 0.95,
-    ngramThresholdMed: 0.90,
+    ngramThresholdHigh: 0.98,   // Raised
+    ngramThresholdMed: 0.95,    // Raised
     functionWordThresholdHigh: 0.88,
     functionWordThresholdMed: 0.78,
     confidenceMultiplier: 0.45,
@@ -120,12 +120,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 0.8,
     networkWeight: 1.2,
     functionWordWeight: 0.8,
-    ngramWeight: 0.7,
+    ngramWeight: 0.5,           // Low - temporal mode doesn't rely on n-grams
     typoWeight: 0.8,
     rareWordWeight: 0.8,
     handoffWeight: 1.5,
-    ngramThresholdHigh: 0.97,
-    ngramThresholdMed: 0.94,
+    ngramThresholdHigh: 0.985,
+    ngramThresholdMed: 0.97,
     functionWordThresholdHigh: 0.92,
     functionWordThresholdMed: 0.85,
     confidenceMultiplier: 0.42,
@@ -133,7 +133,7 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
   },
   linguistic: {
     name: "Linguistic Focus",
-    description: "Emphasizes writing style - function words, n-grams, typos",
+    description: "Emphasizes writing style - function words, n-grams, typos. Calibrated to avoid same-language false positives.",
     minMessages: 25,
     minScoreToReport: 70,
     minStrongReasons: 2,
@@ -142,12 +142,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 1.0,
     networkWeight: 0.6,
     functionWordWeight: 1.5,
-    ngramWeight: 1.3,
+    ngramWeight: 0.8,           // Reduced - n-grams are language-level, not person-level
     typoWeight: 1.3,
     rareWordWeight: 1.2,
     handoffWeight: 0.7,
-    ngramThresholdHigh: 0.96,
-    ngramThresholdMed: 0.92,
+    ngramThresholdHigh: 0.985,  // Raised significantly
+    ngramThresholdMed: 0.97,    // Raised
     functionWordThresholdHigh: 0.90,
     functionWordThresholdMed: 0.82,
     confidenceMultiplier: 0.40,
@@ -164,12 +164,12 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     behavioralWeight: 1.2, // Wurm has specific behavioral patterns
     networkWeight: 0.8,   // Less weight - people often don't interact in general chat
     functionWordWeight: 1.0,
-    ngramWeight: 1.0,
+    ngramWeight: 0.7,     // Reduced - English n-grams too uniform for person-level detection
     typoWeight: 1.1,
     rareWordWeight: 1.3,  // Important - Wurm-specific vocabulary
     handoffWeight: 1.3,   // Multiboxing/alt-switching is common
-    ngramThresholdHigh: 0.96,
-    ngramThresholdMed: 0.93,
+    ngramThresholdHigh: 0.985, // Raised - same-language speakers score ~0.94-0.97
+    ngramThresholdMed: 0.97,   // Raised
     functionWordThresholdHigh: 0.90,
     functionWordThresholdMed: 0.83,
     confidenceMultiplier: 0.42,
