@@ -560,9 +560,9 @@ function countMicroPatternMatches(p1: AdvancedPlayerStats, p2: AdvancedPlayerSta
   const m1 = p1.microPatterns;
   const m2 = p2.microPatterns;
 
-  if (m1.lowercaseI && m2.lowercaseI) matches++;
-  if (m1.noCapitalStart && m2.noCapitalStart) matches++;
-  if (m1.allLowercase && m2.allLowercase) matches++;
+  // Only count DISTINCTIVE patterns that indicate individual style.
+  // "lowercaseI", "allLowercase", "noCapitalStart" are extremely common
+  // in casual internet English and should NOT count as fingerprints.
   if (m1.excessiveCaps && m2.excessiveCaps) matches++;
   if (m1.numberSubstitution && m2.numberSubstitution) matches++;
   if (m1.doubleSpaces && m2.doubleSpaces) matches++;

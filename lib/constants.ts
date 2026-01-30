@@ -415,6 +415,33 @@ export const COMMON_GAMING_WORDS = new Set([
   // Server names and common places
   "harmony", "melody", "cadence", "independence", "deliverance", "exodus",
   "celebration", "xanadu", "pristine", "release", "defiance", "chaos", "elevation",
+  // Common English words that falsely appear as "rare" in small groups
+  // These are normal vocabulary, not stylistic fingerprints
+  "recall", "stance", "drive", "window", "control", "recipe",
+  "manage", "option", "handle", "assume", "afford", "avoid",
+  "blame", "claim", "confirm", "convince", "defeat", "defend",
+  "delay", "deliver", "demand", "detect", "discuss", "display",
+  "divide", "enable", "engage", "ensure", "escape", "evolve",
+  "expand", "expose", "extend", "focus", "ignore", "impose",
+  "invest", "involve", "judge", "launch", "limit", "locate",
+  "obtain", "oppose", "perform", "permit", "phrase", "prefer",
+  "preserve", "prevent", "process", "produce", "promote", "protect",
+  "prove", "pursue", "quote", "reduce", "refer", "reflect",
+  "reform", "refuse", "reject", "relate", "relief", "rely",
+  "remove", "repeat", "replace", "report", "request", "require",
+  "resolve", "respond", "restore", "reveal", "review", "reward",
+  "rotate", "secure", "select", "settle", "signal", "solve",
+  "spread", "submit", "succeed", "supply", "support", "survive",
+  "suspect", "switch", "target", "threat", "transfer", "trigger",
+  "update", "volume", "comment", "device", "effect", "effort",
+  "energy", "engine", "figure", "growth", "impact", "income",
+  "method", "normal", "period", "pocket", "profit", "result",
+  "safety", "screen", "search", "season", "sector", "speech",
+  "status", "stress", "strike", "supply", "symbol", "talent",
+  "theory", "threat", "tissue", "travel", "vision", "wealth",
+  // Gaming peripherals / hardware terms (not fingerprinting)
+  "hotas", "mouse", "keyboard", "joystick", "throttle", "pedals",
+  "monitor", "headset", "controller", "gamepad", "setup", "config",
 ]);
 
 // Wurm-specific terminology
@@ -457,27 +484,31 @@ export const TOPIC_WORDS = [
   "troll", "dragon", "unique", "rift", "valrei",
 ];
 
-// Typo patterns to detect
-export const TYPO_CHECKS = [
-  { pattern: /\bteh\b/g, label: "teh->the" },
-  { pattern: /\bthier\b/g, label: "thier->their" },
-  { pattern: /\byuo\b/g, label: "yuo->you" },
-  { pattern: /\bwaht\b/g, label: "waht->what" },
-  { pattern: /\btaht\b/g, label: "taht->that" },
-  { pattern: /\bhte\b/g, label: "hte->the" },
-  { pattern: /\bwith\b/g, label: "wiht->with" },
-  { pattern: /\balot\b/g, label: "alot" },
-  { pattern: /\bdefinately\b/g, label: "definately" },
-  { pattern: /\brecieve\b/g, label: "recieve" },
-  { pattern: /\boccured\b/g, label: "occured" },
-  { pattern: /\buntill\b/g, label: "untill" },
-  { pattern: /\bwich\b/g, label: "wich->which" },
-  { pattern: /\bbeacuse\b/g, label: "beacuse" },
-  { pattern: /\bfreind\b/g, label: "freind" },
-  { pattern: /\bgoverment\b/g, label: "goverment" },
-  { pattern: /\bgrammer\b/g, label: "grammer" },
-  // Double letters
-  { pattern: /([a-z])\1{2,}/g, label: "triple-letters" },
+// Typo patterns with commonality flag.
+// "common" typos are made by many casual English typists and have low
+// discriminative power for identifying individuals. Only "distinctive"
+// (common: false) typos are strong fingerprints.
+export const TYPO_CHECKS: { pattern: RegExp; label: string; common: boolean }[] = [
+  // Common typos - most casual English speakers make these
+  { pattern: /\bteh\b/g, label: "teh->the", common: true },
+  { pattern: /\bhte\b/g, label: "hte->the", common: true },
+  { pattern: /\bwiht\b/g, label: "wiht->with", common: true },
+  { pattern: /\balot\b/g, label: "alot", common: true },
+  { pattern: /\byuo\b/g, label: "yuo->you", common: true },
+  { pattern: /\bwaht\b/g, label: "waht->what", common: true },
+  { pattern: /\btaht\b/g, label: "taht->that", common: true },
+  { pattern: /([a-z])\1{2,}/g, label: "triple-letters", common: true },
+  // Distinctive typos - these indicate individual spelling habits
+  { pattern: /\bthier\b/g, label: "thier->their", common: false },
+  { pattern: /\bdefinately\b/g, label: "definately", common: false },
+  { pattern: /\brecieve\b/g, label: "recieve", common: false },
+  { pattern: /\boccured\b/g, label: "occured", common: false },
+  { pattern: /\buntill\b/g, label: "untill", common: false },
+  { pattern: /\bwich\b/g, label: "wich->which", common: false },
+  { pattern: /\bbeacuse\b/g, label: "beacuse", common: false },
+  { pattern: /\bfreind\b/g, label: "freind", common: false },
+  { pattern: /\bgoverment\b/g, label: "goverment", common: false },
+  { pattern: /\bgrammer\b/g, label: "grammer", common: false },
 ];
 
 // Letter substitution patterns (txtspk)

@@ -572,7 +572,7 @@ export function compareFunctionWordProfiles(p1: FunctionWordProfile, p2: Functio
   // similarity on function words. Rescale so that baseline similarity maps to ~0.5
   // and only truly distinctive matches score high.
   const rawSimilarity = Math.max(0, 1 - avgDiff);
-  const BASELINE = 0.78; // Expected similarity between random English speakers
+  const BASELINE = 0.82; // Expected similarity between same-dialect (e.g. American) English speakers
   if (rawSimilarity <= BASELINE) {
     return rawSimilarity * 0.5 / BASELINE; // Map 0..baseline -> 0..0.5
   }
