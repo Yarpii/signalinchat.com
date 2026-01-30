@@ -148,8 +148,12 @@ function Footer() {
               Supported Games
             </h3>
             <ul className="space-y-2 text-sm text-text-secondary">
-              <li>Wurm Online</li>
-              <li>Generic / Other</li>
+              <li>
+                <a href="/analyzer/wurm" className="hover:text-text-primary transition-colors">Wurm Online</a>
+              </li>
+              <li>
+                <a href="/analyzer/generic" className="hover:text-text-primary transition-colors">Generic / Other</a>
+              </li>
               <li className="text-text-muted">More games coming soon...</li>
             </ul>
           </div>

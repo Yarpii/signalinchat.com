@@ -221,12 +221,84 @@ export const GENERIC_PROFILE: GameProfile = {
 };
 
 // ============================================================================
+// COMING SOON PROFILES
+// ============================================================================
+
+export const RUST_PROFILE: GameProfile = {
+  id: "rust",
+  name: "Rust",
+  description: "Survival game with team-based chat. Optimized for Rust-specific callouts and team dynamics.",
+  status: "coming_soon",
+  gameTerms: [],
+  commonGameWords: [],
+  systemPlayers: [],
+  tradePatterns: [],
+  abbreviations: [],
+  commonResponses: [],
+  algorithmConfig: null,
+  chatFormatHint: "",
+  dateChangePattern: null,
+};
+
+export const ARK_PROFILE: GameProfile = {
+  id: "ark",
+  name: "ARK: Survival Evolved",
+  description: "Dinosaur survival game. Tribe chat analysis with ARK-specific terminology.",
+  status: "coming_soon",
+  gameTerms: [],
+  commonGameWords: [],
+  systemPlayers: [],
+  tradePatterns: [],
+  abbreviations: [],
+  commonResponses: [],
+  algorithmConfig: null,
+  chatFormatHint: "",
+  dateChangePattern: null,
+};
+
+export const WOW_PROFILE: GameProfile = {
+  id: "wow",
+  name: "World of Warcraft",
+  description: "Classic MMO guild chat analysis. WoW-specific vocabulary and trade patterns.",
+  status: "coming_soon",
+  gameTerms: [],
+  commonGameWords: [],
+  systemPlayers: [],
+  tradePatterns: [],
+  abbreviations: [],
+  commonResponses: [],
+  algorithmConfig: null,
+  chatFormatHint: "",
+  dateChangePattern: null,
+};
+
+export const DISCORD_PROFILE: GameProfile = {
+  id: "discord",
+  name: "Discord",
+  description: "Analyze exported Discord server chat logs for the same forensic patterns.",
+  status: "coming_soon",
+  gameTerms: [],
+  commonGameWords: [],
+  systemPlayers: [],
+  tradePatterns: [],
+  abbreviations: [],
+  commonResponses: [],
+  algorithmConfig: null,
+  chatFormatHint: "",
+  dateChangePattern: null,
+};
+
+// ============================================================================
 // PROFILE REGISTRY
 // ============================================================================
 
 export const GAME_PROFILES: Record<string, GameProfile> = {
   wurm: WURM_ONLINE_PROFILE,
   generic: GENERIC_PROFILE,
+  rust: RUST_PROFILE,
+  ark: ARK_PROFILE,
+  wow: WOW_PROFILE,
+  discord: DISCORD_PROFILE,
 };
 
 export type GameProfileId = keyof typeof GAME_PROFILES;
