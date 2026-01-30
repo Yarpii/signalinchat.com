@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ThemeToggle from "./ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Signal In Chat - Game Chat Intelligence Platform",
@@ -13,7 +14,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem("theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
         <Navigation />
         <main>{children}</main>
@@ -68,6 +76,7 @@ function Navigation() {
             >
               Supported Games
             </a>
+            <ThemeToggle />
             <a
               href="/analyzer"
               className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors text-sm font-medium"
@@ -77,12 +86,15 @@ function Navigation() {
           </div>
 
           {/* Mobile menu button */}
-          <a
-            href="/analyzer"
-            className="sm:hidden px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium"
-          >
-            Analyzer
-          </a>
+          <div className="sm:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <a
+              href="/analyzer"
+              className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium"
+            >
+              Analyzer
+            </a>
+          </div>
         </div>
       </div>
     </nav>
