@@ -171,6 +171,11 @@ export default function AnalyzerPage() {
     return s1 && s2 ? [s1, s2] as [AdvancedPlayerStats, AdvancedPlayerStats] : null;
   }, [compareMode, playerStats]);
 
+  // Show game selector if no game is selected yet
+  if (!selectedGame) {
+    return <GameSelectorScreen onSelect={handleSelectGame} />;
+  }
+
   return (
     <div className="min-h-screen pt-24 pb-8 px-4">
       <div className="max-w-7xl mx-auto">
