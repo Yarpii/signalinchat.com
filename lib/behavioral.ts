@@ -12,6 +12,7 @@ import type {
   SelfTalkIndicator
 } from "./types";
 import { STOP_WORDS, TOPIC_WORDS, COMMON_GAMING_WORDS } from "./constants";
+import { COMMON_ENGLISH_WORDS } from "./wordFrequency";
 import { cosineSimilarity } from "./utils";
 
 /**
@@ -213,13 +214,13 @@ export function detectSharedRareWords(
   const p1Words = new Set(
     p1Text.split(/\s+/)
       .map(w => w.replace(/[^a-z]/g, ""))
-      .filter(w => w.length >= 5 && !COMMON_GAMING_WORDS.has(w))
+      .filter(w => w.length >= 5 && !COMMON_GAMING_WORDS.has(w) && !COMMON_ENGLISH_WORDS.has(w))
   );
 
   const p2Words = new Set(
     p2Text.split(/\s+/)
       .map(w => w.replace(/[^a-z]/g, ""))
-      .filter(w => w.length >= 5 && !COMMON_GAMING_WORDS.has(w))
+      .filter(w => w.length >= 5 && !COMMON_GAMING_WORDS.has(w) && !COMMON_ENGLISH_WORDS.has(w))
   );
 
   const sharedRare: string[] = [];
