@@ -60,7 +60,7 @@ The core analysis engine works with any timestamped chat format:
 
 ## Tech Stack
 
-- **Next.js 14** (App Router, static export)
+- **Next.js 16.1** (App Router, static export)
 - **React 18** with TypeScript
 - **Tailwind CSS** with custom design tokens
 - **Zero external analysis dependencies** — all forensic algorithms are pure TypeScript
