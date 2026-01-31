@@ -447,6 +447,31 @@ export function detectAltsAdvanced(
         });
       }
 
+      // ========== WORD LENGTH DISTRIBUTION ==========
+
+      const wordLenSim = distributionSimilarity(p1.wordLengthDistribution, p2.wordLengthDistribution);
+      if (wordLenSim > 0.93) {
+        const baseScore = 12;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Same word length preferences",
+          weight: weightedScore,
+          evidence: `${Math.round(wordLenSim * 100)}% word length distribution match`,
+        });
+      } else if (wordLenSim > 0.88) {
+        const baseScore = 6;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar word length preferences",
+          weight: weightedScore,
+          evidence: `${Math.round(wordLenSim * 100)}% word length distribution match`,
+        });
+      }
+
       // ========== SHARED UNIQUE WORDS ==========
 
       const sharedRareWords = detectSharedUniqueWords(p1, p2, rareWordIndex, stats.length);
@@ -540,6 +565,41 @@ export function detectAltsAdvanced(
       }
       // Note: only common typos shared (no distinctive ones) = no score.
       // Common typos like teh, alot, triple-letters are too prevalent in casual English.
+
+      // ========== LETTER SUBSTITUTION PATTERNS ==========
+
+      if (p1.letterSubstitutions.size > 0 && p2.letterSubstitutions.size > 0) {
+        const allSubs = new Set([...p1.letterSubstitutions.keys(), ...p2.letterSubstitutions.keys()]);
+        const sharedSubs: string[] = [];
+        for (const sub of allSubs) {
+          if (p1.letterSubstitutions.has(sub) && p2.letterSubstitutions.has(sub)) {
+            sharedSubs.push(sub);
+          }
+        }
+        const jaccard = allSubs.size > 0 ? sharedSubs.length / allSubs.size : 0;
+
+        if (sharedSubs.length >= 3 && jaccard >= 0.5) {
+          const baseScore = 15;
+          const weightedScore = Math.round(baseScore * config.linguisticWeight);
+          scoreBreakdown.linguistic += weightedScore;
+          reasons.push({
+            type: "linguistic",
+            description: "Same letter substitution habits",
+            weight: weightedScore,
+            evidence: `Both use: ${sharedSubs.slice(0, 4).join(", ")} (${Math.round(jaccard * 100)}% overlap)`,
+          });
+        } else if (sharedSubs.length >= 2 && jaccard >= 0.4) {
+          const baseScore = 8;
+          const weightedScore = Math.round(baseScore * config.linguisticWeight);
+          scoreBreakdown.linguistic += weightedScore;
+          reasons.push({
+            type: "linguistic",
+            description: "Similar letter substitution habits",
+            weight: weightedScore,
+            evidence: `Both use: ${sharedSubs.join(", ")}`,
+          });
+        }
+      }
 
       // ========== GREETING/FAREWELL STYLE (NEW) ==========
 
@@ -743,6 +803,31 @@ export function detectAltsAdvanced(
           description: "Same sentence starters",
           weight: weightedScore,
           evidence: sharedStarters.slice(0, 5).join(", "),
+        });
+      }
+
+      // ========== TOPIC FINGERPRINT ==========
+
+      const topicSim = cosineSimilarity(p1.topicFingerprint, p2.topicFingerprint);
+      if (topicSim > 0.85) {
+        const baseScore = 12;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Same topic interests",
+          weight: weightedScore,
+          evidence: `${Math.round(topicSim * 100)}% topic fingerprint overlap`,
+        });
+      } else if (topicSim > 0.75) {
+        const baseScore = 6;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Similar topic interests",
+          weight: weightedScore,
+          evidence: `${Math.round(topicSim * 100)}% topic fingerprint overlap`,
         });
       }
 

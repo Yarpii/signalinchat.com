@@ -290,6 +290,30 @@ export function generateHumanExplanation(
     }
   }
 
+  // Word length preferences
+  const wordLenReason = reasons.find(r => r.description.includes("word length"));
+  if (wordLenReason) {
+    parts.push(`- Same word length preferences (tendency toward short/long words matches)`);
+  }
+
+  // Letter substitution habits
+  const letterSubReason = reasons.find(r => r.description.includes("letter substitution"));
+  if (letterSubReason) {
+    const sharedSubs: string[] = [];
+    for (const [sub] of p1.letterSubstitutions) {
+      if (p2.letterSubstitutions.has(sub)) sharedSubs.push(sub);
+    }
+    if (sharedSubs.length > 0) {
+      parts.push(`- Same text shortcuts: ${sharedSubs.slice(0, 4).map(s => `'${s}'`).join(", ")}`);
+    }
+  }
+
+  // Topic fingerprint
+  const topicReason = reasons.find(r => r.description.includes("topic interest"));
+  if (topicReason) {
+    parts.push(`- Talk about the same topics with similar frequency`);
+  }
+
   if (parts.length <= 1) {
     parts.push("- Multiple patterns in writing style and behavior match");
   }
