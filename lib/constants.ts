@@ -72,11 +72,11 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     minScoreToReport: 100,
     minStrongReasons: 3,
     temporalWeight: 1.2,
-    linguisticWeight: 1.0,
-    behavioralWeight: 0.8,
+    linguisticWeight: 1.1,
+    behavioralWeight: 0.6,
     networkWeight: 0.5,
-    functionWordWeight: 1.3,
-    ngramWeight: 0.5,           // Reduced - n-grams unreliable across same language
+    functionWordWeight: 1.5,      // Most reliable fingerprint — weight high in strict mode
+    ngramWeight: 0.5,             // Reduced - n-grams unreliable across same language
     typoWeight: 1.2,
     rareWordWeight: 1.0,
     handoffWeight: 1.2,
@@ -122,7 +122,7 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     functionWordWeight: 0.8,
     ngramWeight: 0.5,           // Low - temporal mode doesn't rely on n-grams
     typoWeight: 0.8,
-    rareWordWeight: 0.8,
+    rareWordWeight: 0.5,        // Low - temporal mode shouldn't rely on rare words
     handoffWeight: 1.5,
     ngramThresholdHigh: 0.985,
     ngramThresholdMed: 0.97,
@@ -138,11 +138,11 @@ export const ALGORITHM_CONFIGS: Record<AlgorithmMode, AlgorithmConfig> = {
     minScoreToReport: 70,
     minStrongReasons: 2,
     temporalWeight: 0.7,
-    linguisticWeight: 1.4,
+    linguisticWeight: 1.5,
     behavioralWeight: 1.0,
     networkWeight: 0.6,
-    functionWordWeight: 1.5,
-    ngramWeight: 0.8,           // Reduced - n-grams are language-level, not person-level
+    functionWordWeight: 1.8,     // Most reliable — maximize in linguistic mode
+    ngramWeight: 0.8,            // Reduced - n-grams are language-level, not person-level
     typoWeight: 1.3,
     rareWordWeight: 1.2,
     handoffWeight: 0.7,

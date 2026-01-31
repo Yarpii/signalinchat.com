@@ -298,16 +298,41 @@ export function detectAltsAdvanced(
 
       const activitySimilarity = compareActivityPatterns(p1.activityPattern, p2.activityPattern);
       // If activity patterns are DIFFERENT but both have 0 overlap, that's suspicious
-      if (neverOnlineTogether && activitySimilarity < 0.4) {
-        const baseScore = 15;
+      if (neverOnlineTogether && activitySimilarity < 0.3) {
+        const baseScore = 20;
         const weightedScore = Math.round(baseScore * config.temporalWeight);
         scoreBreakdown.temporal += weightedScore;
         reasons.push({
           type: "temporal",
           description: "Complementary schedules",
           weight: weightedScore,
+          evidence: `Very different time-of-day patterns (${Math.round(activitySimilarity * 100)}% similar)`,
+        });
+      } else if (neverOnlineTogether && activitySimilarity < 0.5) {
+        const baseScore = 12;
+        const weightedScore = Math.round(baseScore * config.temporalWeight);
+        scoreBreakdown.temporal += weightedScore;
+        reasons.push({
+          type: "temporal",
+          description: "Different schedules",
+          weight: weightedScore,
           evidence: `Different time-of-day patterns (${Math.round(activitySimilarity * 100)}% similar)`,
         });
+      }
+      // High activity similarity + same writing style = also suspicious (same person, same schedule)
+      if (activitySimilarity > 0.85 && !neverOnlineTogether) {
+        const burstDiff = Math.abs(p1.activityPattern.burstiness - p2.activityPattern.burstiness);
+        if (burstDiff < 0.15) {
+          const baseScore = 8;
+          const weightedScore = Math.round(baseScore * config.temporalWeight);
+          scoreBreakdown.temporal += weightedScore;
+          reasons.push({
+            type: "temporal",
+            description: "Same activity rhythm",
+            weight: weightedScore,
+            evidence: `${Math.round(activitySimilarity * 100)}% schedule match, similar burstiness`,
+          });
+        }
       }
 
       // ========== HANDOFF PATTERN DETECTION ==========
@@ -445,6 +470,16 @@ export function detectAltsAdvanced(
           weight: weightedScore,
           evidence: `${Math.round(msgLenSim * 100)}% message length distribution match`,
         });
+      } else if (msgLenSim > 0.87) {
+        const baseScore = 7;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Similar message length patterns",
+          weight: weightedScore,
+          evidence: `${Math.round(msgLenSim * 100)}% message length distribution match`,
+        });
       }
 
       // ========== WORD LENGTH DISTRIBUTION ==========
@@ -571,22 +606,30 @@ export function detectAltsAdvanced(
       if (p1.letterSubstitutions.size > 0 && p2.letterSubstitutions.size > 0) {
         const allSubs = new Set([...p1.letterSubstitutions.keys(), ...p2.letterSubstitutions.keys()]);
         const sharedSubs: string[] = [];
+        let freqDiffSum = 0;
         for (const sub of allSubs) {
           if (p1.letterSubstitutions.has(sub) && p2.letterSubstitutions.has(sub)) {
             sharedSubs.push(sub);
+            // Compare usage frequency — similar frequency = stronger evidence
+            const f1 = p1.letterSubstitutions.get(sub)!;
+            const f2 = p2.letterSubstitutions.get(sub)!;
+            const maxF = Math.max(f1, f2, 1);
+            freqDiffSum += Math.abs(f1 - f2) / maxF;
           }
         }
         const jaccard = allSubs.size > 0 ? sharedSubs.length / allSubs.size : 0;
+        const avgFreqSim = sharedSubs.length > 0 ? 1 - (freqDiffSum / sharedSubs.length) : 0;
 
         if (sharedSubs.length >= 3 && jaccard >= 0.5) {
-          const baseScore = 15;
+          // Boost score if frequencies also match
+          const baseScore = avgFreqSim > 0.7 ? 18 : 15;
           const weightedScore = Math.round(baseScore * config.linguisticWeight);
           scoreBreakdown.linguistic += weightedScore;
           reasons.push({
             type: "linguistic",
             description: "Same letter substitution habits",
             weight: weightedScore,
-            evidence: `Both use: ${sharedSubs.slice(0, 4).join(", ")} (${Math.round(jaccard * 100)}% overlap)`,
+            evidence: `Both use: ${sharedSubs.slice(0, 4).join(", ")} (${Math.round(jaccard * 100)}% overlap, ${Math.round(avgFreqSim * 100)}% frequency match)`,
           });
         } else if (sharedSubs.length >= 2 && jaccard >= 0.4) {
           const baseScore = 8;
@@ -596,7 +639,7 @@ export function detectAltsAdvanced(
             type: "linguistic",
             description: "Similar letter substitution habits",
             weight: weightedScore,
-            evidence: `Both use: ${sharedSubs.join(", ")}`,
+            evidence: `Both use: ${sharedSubs.join(", ")} (${Math.round(avgFreqSim * 100)}% frequency match)`,
           });
         }
       }

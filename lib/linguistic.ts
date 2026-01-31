@@ -709,9 +709,11 @@ export function compareSentencePatterns(p1: SentencePattern, p2: SentencePattern
     { key: "startsWithConjunction", weight: 1.8 },  // Very distinctive
     { key: "startsWithAdverb", weight: 1.2 },
     { key: "startsWithVerb", weight: 1.0 },
+    { key: "startsWithGreeting", weight: 1.0 },     // Greeting frequency as opener
     { key: "fragmentRate", weight: 1.5 },            // Strong habit
     { key: "questionRate", weight: 1.3 },
     { key: "exclamationRate", weight: 1.0 },
+    { key: "avgWordsPerMessage", weight: 1.3 },      // Message verbosity
     { key: "multiSentenceRate", weight: 1.2 },
   ];
 
@@ -962,7 +964,6 @@ export function buildPunctuationFingerprint(messages: string[]): PunctuationFing
     multiExclamation: exclChainCount > 0 ? Math.round((multiExclamation / exclChainCount) * 1000) / 1000 : 0,
     avgExclamationLength: exclChainCount > 0 ? Math.round((totalExclChainLength / exclChainCount) * 10) / 10 : 0,
     multiQuestion: questionCount > 0 ? Math.round((multiQuestion / questionCount) * 1000) / 1000 : 0,
-    rhetoricalQuestions: 0, // Would need conversational context to detect properly
     dashFrequency: Math.round((dashCount / total) * 100 * 10) / 10,
     parentheticalFrequency: Math.round((parentheticalCount / total) * 100 * 10) / 10,
     commasPerMessage: Math.round((totalCommas / total) * 100) / 100,

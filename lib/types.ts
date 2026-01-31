@@ -202,7 +202,6 @@ export interface PunctuationFingerprint {
   avgExclamationLength: number;   // Average chain length (1, 2, 3+)
   // Question habits
   multiQuestion: number;          // % that use ?? or ???
-  rhetoricalQuestions: number;     // Questions not directed at anyone
   // Dash and parenthetical habits
   dashFrequency: number;          // Per 100 messages (- or --)
   parentheticalFrequency: number; // Per 100 messages (text in parens)
