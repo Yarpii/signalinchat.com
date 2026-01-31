@@ -28,6 +28,9 @@ export default function GameAnalyzerPage() {
   const [compareMode, setCompareMode] = useState<[string, string] | null>(null);
   const [algorithmMode, setAlgorithmMode] = useState<AlgorithmMode>("balanced");
   const [exportOpen, setExportOpen] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
   const gameProfile = useMemo(() => getGameProfile(gameId), [gameId]);
 
   // Redirect to selector if game doesn't exist or is coming_soon
@@ -102,24 +105,58 @@ export default function GameAnalyzerPage() {
     );
   }, []);
 
+  // Simulated progress animation
+  const runWithProgress = useCallback((callback: () => void) => {
+    setAnalyzing(true);
+    setAnalyzeProgress(0);
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 25 + 10;
+      if (progress >= 90) {
+        clearInterval(interval);
+        setAnalyzeProgress(90);
+      } else {
+        setAnalyzeProgress(progress);
+      }
+    }, 120);
+
+    // Small delay to show the progress bar
+    setTimeout(() => {
+      callback();
+      clearInterval(interval);
+      setAnalyzeProgress(100);
+      setTimeout(() => {
+        setAnalyzing(false);
+        setAnalyzeProgress(0);
+      }, 400);
+    }, 500);
+  }, []);
+
   const parseSingleChat = useCallback((text: string) => {
-    const parsed = parseChat(text, 0, gameProfile);
-    setMessages(parsed);
-    setSelectedPlayers([]);
-    setCompareMode(null);
-  }, [gameProfile]);
+    runWithProgress(() => {
+      const parsed = parseChat(text, 0, gameProfile);
+      setMessages(parsed);
+      setSelectedPlayers([]);
+      setCompareMode(null);
+    });
+  }, [gameProfile, runWithProgress]);
 
   const parseMultipleChatsHandler = useCallback((texts: string[]) => {
-    const allMessages = parseMultipleChats(texts, gameProfile);
-    setMessages(allMessages);
-    setSelectedPlayers([]);
-    setCompareMode(null);
-  }, [gameProfile]);
+    runWithProgress(() => {
+      const allMessages = parseMultipleChats(texts, gameProfile);
+      setMessages(allMessages);
+      setSelectedPlayers([]);
+      setCompareMode(null);
+    });
+  }, [gameProfile, runWithProgress]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    processFiles(files);
+  }, []);
 
+  const processFiles = useCallback((files: FileList) => {
     if (files.length === 1) {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -154,12 +191,42 @@ export default function GameAnalyzerPage() {
     }
   }, [rawText, parseSingleChat]);
 
+  // Drag and drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFiles(files);
+    }
+  }, [processFiles]);
+
   const getCompareStats = useMemo(() => {
     if (!compareMode) return null;
     const s1 = playerStats.find((s: AdvancedPlayerStats) => s.name === compareMode[0]);
     const s2 = playerStats.find((s: AdvancedPlayerStats) => s.name === compareMode[1]);
     return s1 && s2 ? [s1, s2] as [AdvancedPlayerStats, AdvancedPlayerStats] : null;
   }, [compareMode, playerStats]);
+
+  // Tab change with animation key
+  const [tabKey, setTabKey] = useState(0);
+  const handleTabChange = useCallback((tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setTabKey((k) => k + 1);
+  }, []);
 
   if (!profile || profile.status === "coming_soon") {
     return (
@@ -173,7 +240,7 @@ export default function GameAnalyzerPage() {
     <div className="min-h-screen pt-24 pb-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in-up">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold text-text-primary mb-2">
@@ -196,7 +263,7 @@ export default function GameAnalyzerPage() {
         </div>
 
         {/* Game Indicator */}
-        <div className="bg-bg-secondary rounded-xl border border-border p-4 mb-4">
+        <div className="bg-bg-secondary rounded-xl border border-border p-4 mb-4 animate-fade-in-up delay-100">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-success rounded-full" />
@@ -217,21 +284,54 @@ export default function GameAnalyzerPage() {
           </div>
         </div>
 
-        {/* Upload Section */}
-        <div className="bg-bg-secondary rounded-xl border border-border p-6 mb-6">
+        {/* Upload Section — with drag & drop */}
+        <div
+          className={`bg-bg-secondary rounded-xl border border-border p-6 mb-6 drop-zone animate-fade-in-up delay-200 ${dragOver ? "drag-over" : ""}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <h2 className="text-lg font-semibold text-text-primary mb-4">Import Chat Log</h2>
+
+          {/* Progress bar */}
+          {analyzing && (
+            <div className="mb-4">
+              <div className="analysis-progress">
+                <div className="bar" style={{ width: `${analyzeProgress}%` }} />
+              </div>
+              <p className="text-xs text-accent mt-2 font-medium">
+                Analyzing chat log... Running forensic analysis engine
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-text-secondary mb-2">
-                Upload .txt file(s) <span className="text-text-muted">(select multiple for multi-day)</span>
+                Upload or drag &amp; drop .txt file(s) <span className="text-text-muted">(select multiple for multi-day)</span>
               </label>
-              <input
-                type="file"
-                accept=".txt,.log"
-                multiple
-                onChange={handleFileUpload}
-                className="w-full px-4 py-2 bg-bg-tertiary rounded-lg text-text-primary border border-border file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-accent file:text-white file:cursor-pointer"
-              />
+              <div className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all ${dragOver ? "border-accent bg-accent/5" : "border-border hover:border-accent/40"}`}>
+                <input
+                  type="file"
+                  accept=".txt,.log"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <svg className={`w-8 h-8 mx-auto mb-2 transition-colors ${dragOver ? "text-accent" : "text-text-muted"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p className="text-sm text-text-secondary">
+                  {dragOver ? (
+                    <span className="text-accent font-semibold">Drop files here</span>
+                  ) : (
+                    <>
+                      <span className="text-accent font-medium">Click to upload</span> or drag & drop
+                    </>
+                  )}
+                </p>
+                <p className="text-xs text-text-muted mt-1">.txt or .log files</p>
+              </div>
             </div>
             <div>
               <label className="block text-sm text-text-secondary mb-2">Or paste chat here</label>
@@ -244,7 +344,8 @@ export default function GameAnalyzerPage() {
                 />
                 <button
                   onClick={handlePaste}
-                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition-colors"
+                  disabled={analyzing}
+                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition-colors disabled:opacity-50"
                 >
                   Analyze
                 </button>
@@ -279,22 +380,22 @@ export default function GameAnalyzerPage() {
 
           {messages.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-4 text-sm items-center">
-              <span className="px-3 py-1 bg-bg-tertiary rounded-full text-text-secondary">
+              <span className="px-3 py-1 bg-bg-tertiary rounded-full text-text-secondary stat-card">
                 {messages.length} messages
               </span>
-              <span className="px-3 py-1 bg-bg-tertiary rounded-full text-text-secondary">
+              <span className="px-3 py-1 bg-bg-tertiary rounded-full text-text-secondary stat-card">
                 {players.length} players
               </span>
-              <span className="px-3 py-1 bg-info/20 text-info rounded-full">
+              <span className="px-3 py-1 bg-info/20 text-info rounded-full stat-card">
                 {Math.max(...messages.map((m: ChatMessage) => m.dayIndex)) + 1} day(s)
               </span>
               {altSuspicions.filter((s: AltSuspicion) => s.category === "critical").length > 0 && (
-                <span className="px-3 py-1 bg-error/20 text-error rounded-full font-semibold">
+                <span className="px-3 py-1 bg-error/20 text-error rounded-full font-semibold stat-card">
                   {altSuspicions.filter((s: AltSuspicion) => s.category === "critical").length} strong similarities
                 </span>
               )}
               {altSuspicions.filter((s: AltSuspicion) => s.category === "high").length > 0 && (
-                <span className="px-3 py-1 bg-warning/20 text-warning rounded-full">
+                <span className="px-3 py-1 bg-warning/20 text-warning rounded-full stat-card">
                   {altSuspicions.filter((s: AltSuspicion) => s.category === "high").length} notable similarities
                 </span>
               )}
@@ -314,7 +415,7 @@ export default function GameAnalyzerPage() {
                   </svg>
                 </button>
                 {exportOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-56 bg-bg-secondary border border-border rounded-lg shadow-xl z-50">
+                  <div className="absolute right-0 top-full mt-1 w-56 bg-bg-secondary border border-border rounded-lg shadow-xl z-50 animate-scale-in">
                     <button
                       onClick={() => { exportFullReportJSON({ messages, playerStats, altSuspicions, socialInsights, slipPatterns, similarityMatrix, algorithmMode }); setExportOpen(false); }}
                       className="w-full text-left px-4 py-3 text-sm text-text-primary hover:bg-bg-tertiary rounded-t-lg transition-colors"
@@ -361,10 +462,10 @@ export default function GameAnalyzerPage() {
               {(["chat", "players", "alts", "social", "matrix", "forensics"] as const).map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  onClick={() => handleTabChange(tab)}
+                  className={`px-4 py-2 rounded-lg transition-all ${
                     activeTab === tab
-                      ? "bg-accent text-white"
+                      ? "bg-accent text-white shadow-md shadow-accent/20"
                       : "bg-bg-secondary text-text-secondary hover:bg-bg-tertiary"
                   }`}
                 >
@@ -378,69 +479,72 @@ export default function GameAnalyzerPage() {
               ))}
             </div>
 
-            {/* Chat Tab */}
-            {activeTab === "chat" && (
-              <ChatTab
-                messages={filteredMessages}
-                allMessages={messages}
-                players={players}
-                selectedPlayers={selectedPlayers}
-                setSelectedPlayers={setSelectedPlayers}
-                togglePlayer={togglePlayer}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-              />
-            )}
+            {/* Tab content with animation */}
+            <div key={tabKey} className="tab-content-enter">
+              {/* Chat Tab */}
+              {activeTab === "chat" && (
+                <ChatTab
+                  messages={filteredMessages}
+                  allMessages={messages}
+                  players={players}
+                  selectedPlayers={selectedPlayers}
+                  setSelectedPlayers={setSelectedPlayers}
+                  togglePlayer={togglePlayer}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                />
+              )}
 
-            {/* Players Tab */}
-            {activeTab === "players" && (
-              <PlayersTab playerStats={playerStats} />
-            )}
+              {/* Players Tab */}
+              {activeTab === "players" && (
+                <PlayersTab playerStats={playerStats} />
+              )}
 
-            {/* Alts Tab */}
-            {activeTab === "alts" && (
-              <AltsTab
-                altSuspicions={altSuspicions}
-                setSelectedPlayers={setSelectedPlayers}
-                setActiveTab={setActiveTab}
-                setCompareMode={setCompareMode}
-                activeConfig={activeConfig}
-              />
-            )}
+              {/* Alts Tab */}
+              {activeTab === "alts" && (
+                <AltsTab
+                  altSuspicions={altSuspicions}
+                  setSelectedPlayers={setSelectedPlayers}
+                  setActiveTab={handleTabChange}
+                  setCompareMode={setCompareMode}
+                  activeConfig={activeConfig}
+                />
+              )}
 
-            {/* Social Tab */}
-            {activeTab === "social" && (
-              <SocialTab
-                socialInsights={socialInsights}
-                slipPatterns={slipPatterns}
-                setSelectedPlayers={setSelectedPlayers}
-                setActiveTab={setActiveTab}
-              />
-            )}
+              {/* Social Tab */}
+              {activeTab === "social" && (
+                <SocialTab
+                  socialInsights={socialInsights}
+                  slipPatterns={slipPatterns}
+                  setSelectedPlayers={setSelectedPlayers}
+                  setActiveTab={handleTabChange}
+                />
+              )}
 
-            {/* Similarity Matrix Tab */}
-            {activeTab === "matrix" && similarityMatrix.players.length > 0 && (
-              <MatrixTab
-                similarityMatrix={similarityMatrix}
-                setCompareMode={setCompareMode}
-                setActiveTab={setActiveTab}
-              />
-            )}
+              {/* Similarity Matrix Tab */}
+              {activeTab === "matrix" && similarityMatrix.players.length > 0 && (
+                <MatrixTab
+                  similarityMatrix={similarityMatrix}
+                  setCompareMode={setCompareMode}
+                  setActiveTab={handleTabChange}
+                />
+              )}
 
-            {/* Forensics Lab Tab */}
-            {activeTab === "forensics" && (
-              <ForensicsTab
-                players={players}
-                compareMode={compareMode}
-                setCompareMode={setCompareMode}
-                getCompareStats={getCompareStats}
-              />
-            )}
+              {/* Forensics Lab Tab */}
+              {activeTab === "forensics" && (
+                <ForensicsTab
+                  players={players}
+                  compareMode={compareMode}
+                  setCompareMode={setCompareMode}
+                  getCompareStats={getCompareStats}
+                />
+              )}
+            </div>
           </>
         )}
 
         {/* Empty State */}
-        {messages.length === 0 && <EmptyState />}
+        {messages.length === 0 && !analyzing && <EmptyState />}
       </div>
     </div>
   );
@@ -531,7 +635,7 @@ function ChatTab({
 
       <div className="max-h-[500px] overflow-y-auto p-4 font-mono text-sm space-y-1">
         {messages.map((msg, idx) => (
-          <div key={idx} className="flex gap-2 hover:bg-bg-tertiary/50 px-2 py-1 rounded">
+          <div key={idx} className="flex gap-2 hover:bg-bg-tertiary/50 px-2 py-1 rounded transition-colors">
             <span className="text-text-muted shrink-0">[{msg.timestamp}]</span>
             <span
               className="font-semibold shrink-0 cursor-pointer hover:underline"
@@ -558,10 +662,11 @@ function PlayersTab({ playerStats }: { playerStats: AdvancedPlayerStats[] }) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {playerStats
         .sort((a, b) => b.messageCount - a.messageCount)
-        .map(stats => (
+        .map((stats, idx) => (
         <div
           key={stats.name}
-          className="bg-bg-secondary rounded-xl border border-border p-4"
+          className="bg-bg-secondary rounded-xl border border-border p-4 hover-lift"
+          style={{ animationDelay: `${idx * 50}ms` }}
         >
           <div className="flex items-center justify-between mb-4">
             <h3
@@ -577,23 +682,23 @@ function PlayersTab({ playerStats }: { playerStats: AdvancedPlayerStats[] }) {
 
           <div className="space-y-3 text-sm">
             <div className="grid grid-cols-4 gap-2">
-              <div className="bg-bg-tertiary rounded-lg p-2 text-center">
+              <div className="bg-bg-tertiary rounded-lg p-2 text-center stat-card">
                 <div className="text-text-muted text-xs">Words</div>
                 <div className="text-text-primary font-semibold">{stats.wordCount}</div>
               </div>
-              <div className="bg-bg-tertiary rounded-lg p-2 text-center">
+              <div className="bg-bg-tertiary rounded-lg p-2 text-center stat-card">
                 <div className="text-text-muted text-xs">Avg/msg</div>
                 <div className="text-text-primary font-semibold">
                   {stats.avgWordsPerMessage.toFixed(1)}
                 </div>
               </div>
-              <div className="bg-bg-tertiary rounded-lg p-2 text-center">
+              <div className="bg-bg-tertiary rounded-lg p-2 text-center stat-card">
                 <div className="text-text-muted text-xs">Vocab</div>
                 <div className="text-text-primary font-semibold">
                   {(stats.vocabularyRichness * 100).toFixed(0)}%
                 </div>
               </div>
-              <div className="bg-bg-tertiary rounded-lg p-2 text-center">
+              <div className="bg-bg-tertiary rounded-lg p-2 text-center stat-card">
                 <div className="text-text-muted text-xs">Yule K</div>
                 <div className="text-text-primary font-semibold">{stats.yulesK}</div>
               </div>
@@ -722,14 +827,17 @@ function AltsTab({
 }) {
   if (altSuspicions.length === 0) {
     return (
-      <div className="bg-bg-secondary rounded-xl border border-border p-8 text-center">
-        <svg className="w-10 h-10 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+      <div className="bg-bg-secondary rounded-xl border border-border p-12 text-center">
+        <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
         <h3 className="text-lg font-semibold text-text-primary mb-2">
           No notable similarities found
         </h3>
-        <p className="text-text-secondary">
+        <p className="text-text-secondary max-w-md mx-auto">
           The forensic analysis found no matches using <strong>{activeConfig.name}</strong>.
-          <br />
           Try the &quot;Sensitive&quot; algorithm for more results, or add more chat messages.
         </p>
       </div>
@@ -777,7 +885,7 @@ function AltSuspicionCard({
 }) {
   return (
     <div
-      className={`bg-bg-secondary rounded-xl border p-4 ${
+      className={`bg-bg-secondary rounded-xl border p-4 hover-lift ${
         suspicion.category === "critical"
           ? "border-error"
           : suspicion.category === "high"
@@ -905,7 +1013,7 @@ function ScoreBreakdownBars({ suspicion }: { suspicion: AltSuspicion }) {
           <span className="text-text-muted">{suspicion.scoreBreakdown.temporal + suspicion.scoreBreakdown.handoff}/80</span>
         </div>
         <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
-          <div className="h-full bg-error rounded-full transition-all" style={{ width: `${Math.min(((suspicion.scoreBreakdown.temporal + suspicion.scoreBreakdown.handoff) / 80) * 100, 100)}%` }} />
+          <div className="h-full bg-error rounded-full transition-all duration-1000" style={{ width: `${Math.min(((suspicion.scoreBreakdown.temporal + suspicion.scoreBreakdown.handoff) / 80) * 100, 100)}%` }} />
         </div>
       </div>
 
@@ -915,7 +1023,7 @@ function ScoreBreakdownBars({ suspicion }: { suspicion: AltSuspicion }) {
           <span className="text-text-muted">{suspicion.scoreBreakdown.linguistic + suspicion.scoreBreakdown.rareWords}/80</span>
         </div>
         <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
-          <div className="h-full bg-warning rounded-full transition-all" style={{ width: `${Math.min(((suspicion.scoreBreakdown.linguistic + suspicion.scoreBreakdown.rareWords) / 80) * 100, 100)}%` }} />
+          <div className="h-full bg-warning rounded-full transition-all duration-1000" style={{ width: `${Math.min(((suspicion.scoreBreakdown.linguistic + suspicion.scoreBreakdown.rareWords) / 80) * 100, 100)}%` }} />
         </div>
       </div>
 
@@ -925,7 +1033,7 @@ function ScoreBreakdownBars({ suspicion }: { suspicion: AltSuspicion }) {
           <span className="text-text-muted">{suspicion.scoreBreakdown.behavioral}/50</span>
         </div>
         <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
-          <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${Math.min((suspicion.scoreBreakdown.behavioral / 50) * 100, 100)}%` }} />
+          <div className="h-full bg-accent rounded-full transition-all duration-1000" style={{ width: `${Math.min((suspicion.scoreBreakdown.behavioral / 50) * 100, 100)}%` }} />
         </div>
       </div>
 
@@ -935,7 +1043,7 @@ function ScoreBreakdownBars({ suspicion }: { suspicion: AltSuspicion }) {
           <span className="text-text-muted">{suspicion.scoreBreakdown.network}/20</span>
         </div>
         <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
-          <div className="h-full bg-success rounded-full transition-all" style={{ width: `${Math.min((suspicion.scoreBreakdown.network / 20) * 100, 100)}%` }} />
+          <div className="h-full bg-success rounded-full transition-all duration-1000" style={{ width: `${Math.min((suspicion.scoreBreakdown.network / 20) * 100, 100)}%` }} />
         </div>
       </div>
 
@@ -946,7 +1054,7 @@ function ScoreBreakdownBars({ suspicion }: { suspicion: AltSuspicion }) {
             <span className="text-text-muted">+{suspicion.scoreBreakdown.bonus}</span>
           </div>
           <div className="h-2 bg-bg-secondary rounded-full overflow-hidden">
-            <div className="h-full bg-info rounded-full transition-all" style={{ width: `${Math.min((suspicion.scoreBreakdown.bonus / 50) * 100, 100)}%` }} />
+            <div className="h-full bg-info rounded-full transition-all duration-1000" style={{ width: `${Math.min((suspicion.scoreBreakdown.bonus / 50) * 100, 100)}%` }} />
           </div>
         </div>
       )}
@@ -979,7 +1087,7 @@ function MatrixTab({
   return (
     <div className="bg-bg-secondary rounded-xl border border-border p-4 overflow-x-auto">
       <h3 className="text-lg font-semibold text-text-primary mb-4">Player Similarity Matrix</h3>
-      <p className="text-text-secondary text-sm mb-4">Heatmap of similarities between players. Higher scores = more suspicious.</p>
+      <p className="text-text-secondary text-sm mb-4">Hover cells for details. Click to open forensic comparison.</p>
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs">
           <thead>
@@ -1001,19 +1109,27 @@ function MatrixTab({
                 {similarityMatrix.scores[i].map((score, j) => {
                   const intensity = Math.min(score / 80, 1);
                   const bg = i === j ? "transparent" : score >= 60 ? `rgba(239, 68, 68, ${intensity})` : score >= 30 ? `rgba(245, 158, 11, ${intensity})` : score > 0 ? `rgba(59, 130, 246, ${intensity * 0.5})` : "transparent";
+                  const p2 = similarityMatrix.players[j];
+                  const label = score >= 60 ? "Critical" : score >= 30 ? "Suspicious" : score > 0 ? "Low" : "";
                   return (
                     <td
                       key={j}
-                      className="p-2 text-center cursor-pointer hover:ring-2 hover:ring-white"
+                      className={`p-2 text-center ${i !== j && score > 0 ? "matrix-cell cursor-pointer" : ""}`}
                       style={{ backgroundColor: bg }}
                       onClick={() => {
                         if (i !== j && score > 0) {
-                          setCompareMode([p1, similarityMatrix.players[j]]);
+                          setCompareMode([p1, p2]);
                           setActiveTab("forensics");
                         }
                       }}
                     >
                       {i === j ? "-" : score > 0 ? score : ""}
+                      {i !== j && score > 0 && (
+                        <div className="matrix-tooltip">
+                          <strong>{p1}</strong> vs <strong>{p2}</strong>: {score} pts
+                          {label && <span className="ml-1 opacity-70">({label})</span>}
+                        </div>
+                      )}
                     </td>
                   );
                 })}
@@ -1053,12 +1169,15 @@ function SocialTab({
 }) {
   if (socialInsights.length === 0 && slipPatterns.length === 0) {
     return (
-      <div className="bg-bg-secondary rounded-xl border border-border p-8 text-center">
-        <svg className="w-10 h-10 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+      <div className="bg-bg-secondary rounded-xl border border-border p-12 text-center">
+        <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
         <h3 className="text-lg font-semibold text-text-primary mb-2">No social patterns detected</h3>
-        <p className="text-text-secondary">
+        <p className="text-text-secondary max-w-md mx-auto">
           No conflicts, self-talk, or typing inconsistencies found.
-          <br />
           This analysis works best with more chat data and multiple active players.
         </p>
       </div>
@@ -1073,7 +1192,7 @@ function SocialTab({
           {socialInsights.map((insight, idx) => (
             <div
               key={idx}
-              className={`bg-bg-secondary rounded-xl border p-4 ${
+              className={`bg-bg-secondary rounded-xl border p-4 hover-lift ${
                 insight.insightType === "self_talk_suspected" ? "border-error" : insight.insightType === "conflict_detected" ? "border-warning" : "border-border"
               }`}
             >
@@ -1125,7 +1244,7 @@ function SocialTab({
           {slipPatterns.map((slip, idx) => (
             <div
               key={idx}
-              className={`bg-bg-secondary rounded-xl border p-4 ${
+              className={`bg-bg-secondary rounded-xl border p-4 hover-lift ${
                 slip.suspicionLevel === "high" ? "border-error" : slip.suspicionLevel === "medium" ? "border-warning" : "border-border"
               }`}
             >
@@ -1212,9 +1331,14 @@ function ForensicsTab({
       )}
 
       {!getCompareStats && (
-        <div className="bg-bg-secondary rounded-xl border border-border p-8 text-center">
-          <svg className="w-10 h-10 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-          <p className="text-text-secondary">Select two accounts to begin forensic comparison</p>
+        <div className="bg-bg-secondary rounded-xl border border-border p-12 text-center">
+          <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-text-primary mb-2">Select two accounts</h3>
+          <p className="text-text-secondary">Choose two player accounts above to begin a side-by-side forensic comparison.</p>
         </div>
       )}
     </div>
@@ -1223,7 +1347,7 @@ function ForensicsTab({
 
 function ForensicsPlayerCard({ stats, otherStats }: { stats: AdvancedPlayerStats; otherStats: AdvancedPlayerStats }) {
   return (
-    <div className="bg-bg-secondary rounded-xl border border-border p-4">
+    <div className="bg-bg-secondary rounded-xl border border-border p-4 hover-lift">
       <h4 className="text-lg font-semibold mb-4" style={{ color: getPlayerColor(stats.name) }}>{stats.name}</h4>
       <div className="space-y-4 text-sm">
         <div>
@@ -1282,7 +1406,7 @@ function ForensicsPlayerCard({ stats, otherStats }: { stats: AdvancedPlayerStats
           <div className="text-text-muted mb-2 font-semibold">Word length distribution</div>
           <div className="flex items-end gap-px h-16">
             {stats.wordLengthDistribution.slice(1, 12).map((val, i) => (
-              <div key={i} className="flex-1 bg-accent/60 rounded-t" style={{ height: `${val * 100}%` }} title={`${i + 1} letters: ${(val * 100).toFixed(1)}%`}></div>
+              <div key={i} className="flex-1 bg-accent/60 rounded-t transition-all duration-500" style={{ height: `${val * 100}%` }} title={`${i + 1} letters: ${(val * 100).toFixed(1)}%`}></div>
             ))}
           </div>
           <div className="flex gap-px text-[8px] text-text-muted mt-1">
@@ -1298,10 +1422,15 @@ function ForensicsPlayerCard({ stats, otherStats }: { stats: AdvancedPlayerStats
 
 function EmptyState() {
   return (
-    <div className="bg-bg-secondary rounded-xl border border-border p-12 text-center">
-      <svg className="w-12 h-12 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+    <div className="bg-bg-secondary rounded-xl border border-border p-12 text-center animate-fade-in-up">
+      <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg className="w-10 h-10 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      </div>
       <h2 className="text-xl font-semibold text-text-primary mb-2">Upload a chat log to begin</h2>
-      <p className="text-text-secondary mb-4">Supported format: [HH:MM:SS] &lt;PlayerName&gt; message</p>
+      <p className="text-text-secondary mb-2">Drag &amp; drop files above or click to browse</p>
+      <p className="text-text-muted text-sm mb-6">Supported format: [HH:MM:SS] &lt;PlayerName&gt; message</p>
       <div className="bg-bg-tertiary rounded-lg p-4 text-left font-mono text-sm max-w-md mx-auto">
         <div className="text-text-muted">[21:25:05] &lt;Yarpii&gt; hey everyone whats going on</div>
         <div className="text-text-muted">[21:25:12] &lt;Minabello&gt; not much just working on my deed</div>
@@ -1311,22 +1440,17 @@ function EmptyState() {
       <div className="mt-8 text-left max-w-xl mx-auto">
         <h3 className="text-lg font-semibold text-text-primary mb-3">Forensic Techniques:</h3>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="bg-bg-tertiary rounded-lg p-3">
-            <div className="font-semibold text-error">Temporal Analysis</div>
-            <div className="text-text-muted">Detects accounts that are never online together</div>
-          </div>
-          <div className="bg-bg-tertiary rounded-lg p-3">
-            <div className="font-semibold text-warning">N-gram Fingerprinting</div>
-            <div className="text-text-muted">Character patterns identify writing style</div>
-          </div>
-          <div className="bg-bg-tertiary rounded-lg p-3">
-            <div className="font-semibold text-info">Yule&apos;s K Stylometry</div>
-            <div className="text-text-muted">Statistical author fingerprint</div>
-          </div>
-          <div className="bg-bg-tertiary rounded-lg p-3">
-            <div className="font-semibold text-success">Network Analysis</div>
-            <div className="text-text-muted">Interaction patterns and conversation partners</div>
-          </div>
+          {[
+            { color: "error", title: "Temporal Analysis", desc: "Detects accounts that are never online together" },
+            { color: "warning", title: "N-gram Fingerprinting", desc: "Character patterns identify writing style" },
+            { color: "info", title: "Yule's K Stylometry", desc: "Statistical author fingerprint" },
+            { color: "success", title: "Network Analysis", desc: "Interaction patterns and conversation partners" },
+          ].map((item, i) => (
+            <div key={i} className="bg-bg-tertiary rounded-lg p-3 hover-lift">
+              <div className={`font-semibold text-${item.color}`}>{item.title}</div>
+              <div className="text-text-muted">{item.desc}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

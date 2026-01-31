@@ -53,6 +53,29 @@ const GAME_ICONS: Record<string, React.ReactNode> = {
   ),
 };
 
+const COMING_SOON_COLORS: Record<string, { gradient: string; accent: string; glow: string }> = {
+  discord: {
+    gradient: "from-indigo-500/15 to-violet-500/10",
+    accent: "text-indigo-400",
+    glow: "bg-indigo-500",
+  },
+  rust: {
+    gradient: "from-orange-500/15 to-red-500/10",
+    accent: "text-orange-400",
+    glow: "bg-orange-500",
+  },
+  ark: {
+    gradient: "from-emerald-500/15 to-teal-500/10",
+    accent: "text-emerald-400",
+    glow: "bg-emerald-500",
+  },
+  wow: {
+    gradient: "from-amber-500/15 to-yellow-500/10",
+    accent: "text-amber-400",
+    glow: "bg-amber-500",
+  },
+};
+
 export default function GameSelectorPage() {
   const profiles = getAvailableProfiles();
 
@@ -63,7 +86,7 @@ export default function GameSelectorPage() {
     <div className="min-h-screen pt-24 pb-16 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-4">
+        <div className="text-center mb-4 animate-fade-in-up">
           <a
             href="/"
             className="inline-flex items-center gap-1 text-text-muted hover:text-text-secondary transition-colors text-sm mb-6"
@@ -82,12 +105,13 @@ export default function GameSelectorPage() {
         </div>
 
         {/* Live Games */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12 mt-10">
-          {liveProfiles.map((profile) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-16 mt-10">
+          {liveProfiles.map((profile, i) => (
             <a
               key={profile.id}
               href={`/analyzer/${profile.id}`}
-              className="group relative bg-bg-secondary rounded-2xl border border-border p-8 hover:border-accent/50 hover:shadow-lg transition-all hover:-translate-y-1"
+              className={`group relative bg-bg-secondary rounded-2xl border border-border p-8 hover:border-accent/50 hover-lift animate-fade-in-up`}
+              style={{ animationDelay: `${i * 100}ms` }}
             >
               <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 bg-success/15 border border-success/30 rounded-full">
                 <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
@@ -135,50 +159,102 @@ export default function GameSelectorPage() {
         {/* Coming Soon */}
         {comingSoonProfiles.length > 0 && (
           <>
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-8 animate-fade-in-up delay-200">
               <div className="h-px flex-1 bg-border" />
-              <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider">
-                Coming Soon
-              </h2>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider">
+                  Coming Soon
+                </h2>
+              </div>
               <div className="h-px flex-1 bg-border" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {comingSoonProfiles.map((profile) => (
-                <div
-                  key={profile.id}
-                  className="relative bg-bg-secondary rounded-2xl border border-border/50 p-6 text-center overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-bg-primary/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
-                    <span className="px-4 py-2 bg-warning/15 border border-warning/30 text-warning text-sm font-semibold rounded-full">
-                      COMING SOON
-                    </span>
-                  </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {comingSoonProfiles.map((profile, i) => {
+                const colors = COMING_SOON_COLORS[profile.id] || {
+                  gradient: "from-accent/15 to-accent/5",
+                  accent: "text-accent",
+                  glow: "bg-accent",
+                };
+                return (
+                  <div
+                    key={profile.id}
+                    className={`group relative bg-bg-secondary rounded-2xl border border-border p-6 overflow-hidden transition-all duration-300 hover:border-border hover:shadow-lg animate-fade-in-up`}
+                    style={{ animationDelay: `${300 + i * 80}ms` }}
+                  >
+                    {/* Subtle gradient background */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
 
-                  <div className="w-12 h-12 bg-bg-tertiary rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <svg
-                      className="w-6 h-6 text-text-muted"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      {GAME_ICONS[profile.id] || GAME_ICONS.generic}
-                    </svg>
+                    {/* Top accent line */}
+                    <div className={`absolute top-0 left-0 right-0 h-0.5 ${colors.glow} opacity-30`} />
+
+                    <div className="relative">
+                      {/* Badge */}
+                      <div className="flex items-center justify-between mb-5">
+                        <div className="w-12 h-12 bg-bg-tertiary rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                          <svg
+                            className={`w-6 h-6 text-text-muted group-hover:${colors.accent} transition-colors duration-300`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            {GAME_ICONS[profile.id] || GAME_ICONS.generic}
+                          </svg>
+                        </div>
+                        <span className="px-2.5 py-1 bg-bg-tertiary border border-border rounded-full text-text-muted text-[10px] font-semibold uppercase tracking-wider group-hover:border-warning/30 group-hover:text-warning group-hover:bg-warning/10 transition-all duration-300">
+                          Soon
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-bold text-text-primary mb-1.5 group-hover:text-text-primary transition-colors">
+                        {profile.name}
+                      </h3>
+                      <p className="text-text-muted text-xs leading-relaxed mb-4">
+                        {profile.description}
+                      </p>
+
+                      {/* Feature hints */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {["Stylometry", "Temporal", "Network"].map((feature) => (
+                          <span
+                            key={feature}
+                            className="px-2 py-0.5 bg-bg-tertiary rounded text-[10px] text-text-muted font-medium"
+                          >
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-text-primary mb-1">
-                    {profile.name}
-                  </h3>
-                  <p className="text-text-muted text-xs">
-                    {profile.description}
+                );
+              })}
+            </div>
+
+            {/* Notify / request section */}
+            <div className="mt-8 bg-bg-secondary rounded-2xl border border-border p-6 animate-fade-in-up delay-600">
+              <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-text-primary text-sm mb-1">Want a specific game supported?</h4>
+                  <p className="text-text-secondary text-sm">
+                    The core forensic engine works with any timestamped chat. Game profiles add
+                    vocabulary filtering and tuning. Use the <a href="/analyzer/generic" className="text-accent hover:underline font-medium">Generic analyzer</a> in the meantime.
                   </p>
                 </div>
-              ))}
+              </div>
             </div>
           </>
         )}
 
         {/* Info box */}
-        <div className="mt-12 bg-bg-secondary border border-border rounded-xl p-6">
+        <div className="mt-8 bg-bg-secondary border border-border rounded-xl p-6 animate-fade-in-up delay-400">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
               <svg className="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
