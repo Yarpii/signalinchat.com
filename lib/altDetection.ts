@@ -11,107 +11,194 @@ import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigram
 import type { SocialInsight, SlipPattern } from "./types";
 
 /**
- * Detect handoff pattern between two players
- * (When one player stops, the other starts within a short window)
+ * Detect handoff pattern between two players (v4.2 - Enhanced)
+ * Analyzes: directionality, timing consistency, session shadowing
  */
 export function detectHandoffPattern(
   p1: AdvancedPlayerStats,
   p2: AdvancedPlayerStats,
   messages: ChatMessage[]
 ): HandoffResult {
-  // Need enough messages for meaningful analysis
-  if (p1.messageCount < 10 || p2.messageCount < 10) {
-    return { score: 0, handoffCount: 0, totalTransitions: 0 };
-  }
+  const empty: HandoffResult = {
+    score: 0, handoffCount: 0, totalTransitions: 0,
+    directionality: 0, dominantDirection: "balanced",
+    p1ToP2Count: 0, p2ToP1Count: 0,
+    avgHandoffDelay: 0, delayConsistency: 0, sessionShadowing: 0,
+    handoffDelays: [],
+  };
 
-  const SESSION_GAP = 600; // 10 minutes = considered "stopped talking"
-  const HANDOFF_WINDOW = 300; // 5 minutes = handoff window
+  if (p1.messageCount < 10 || p2.messageCount < 10) return empty;
 
-  let handoffCount = 0;
-  let totalTransitions = 0;
+  const SESSION_GAP = 600; // 10 min = new session
+  const HANDOFF_WINDOW = 300; // 5 min = handoff window
 
-  // Get all messages from both players sorted by absolute time
   const p1Messages = messages.filter(m => m.player === p1.name);
   const p2Messages = messages.filter(m => m.player === p2.name);
 
-  // Find sessions for each player (gaps > 10 min = new session)
-  function findSessionEnds(playerMsgs: ChatMessage[]): number[] {
-    const ends: number[] = [];
-    for (let i = 0; i < playerMsgs.length - 1; i++) {
-      const gap = playerMsgs[i + 1].absoluteTime - playerMsgs[i].absoluteTime;
-      if (gap > SESSION_GAP) {
-        ends.push(playerMsgs[i].absoluteTime);
-      }
-    }
-    // Last message is also a session end
-    if (playerMsgs.length > 0) {
-      ends.push(playerMsgs[playerMsgs.length - 1].absoluteTime);
-    }
-    return ends;
-  }
+  // Build session intervals [start, end] for each player
+  interface Session { start: number; end: number }
 
-  function findSessionStarts(playerMsgs: ChatMessage[]): number[] {
-    const starts: number[] = [];
-    if (playerMsgs.length > 0) {
-      starts.push(playerMsgs[0].absoluteTime);
-    }
+  function findSessions(playerMsgs: ChatMessage[]): Session[] {
+    if (playerMsgs.length === 0) return [];
+    const sessions: Session[] = [];
+    let sessionStart = playerMsgs[0].absoluteTime;
+    let sessionEnd = sessionStart;
     for (let i = 1; i < playerMsgs.length; i++) {
-      const gap = playerMsgs[i].absoluteTime - playerMsgs[i - 1].absoluteTime;
-      if (gap > SESSION_GAP) {
-        starts.push(playerMsgs[i].absoluteTime);
+      if (playerMsgs[i].absoluteTime - sessionEnd > SESSION_GAP) {
+        sessions.push({ start: sessionStart, end: sessionEnd });
+        sessionStart = playerMsgs[i].absoluteTime;
       }
+      sessionEnd = playerMsgs[i].absoluteTime;
     }
-    return starts;
+    sessions.push({ start: sessionStart, end: sessionEnd });
+    return sessions;
   }
 
-  const p1Ends = findSessionEnds(p1Messages);
-  const p2Starts = findSessionStarts(p2Messages);
-  const p2Ends = findSessionEnds(p2Messages);
-  const p1Starts = findSessionStarts(p1Messages);
+  const p1Sessions = findSessions(p1Messages);
+  const p2Sessions = findSessions(p2Messages);
 
-  // Check P1 ends -> P2 starts handoffs
-  for (const end of p1Ends) {
-    for (const start of p2Starts) {
-      const diff = start - end;
-      if (diff > 0 && diff <= HANDOFF_WINDOW) {
-        handoffCount++;
-        break;
+  if (p1Sessions.length < 2 && p2Sessions.length < 2) return empty;
+
+  // Detect handoffs in both directions with delay tracking
+  let p1ToP2 = 0;
+  let p2ToP1 = 0;
+  const handoffDelays: number[] = [];
+
+  // P1 ends → P2 starts
+  for (const p1Sess of p1Sessions) {
+    let bestDelay = Infinity;
+    for (const p2Sess of p2Sessions) {
+      const diff = p2Sess.start - p1Sess.end;
+      if (diff > 0 && diff <= HANDOFF_WINDOW && diff < bestDelay) {
+        bestDelay = diff;
       }
     }
-    totalTransitions++;
+    if (bestDelay < Infinity) {
+      p1ToP2++;
+      handoffDelays.push(bestDelay);
+    }
   }
 
-  // Check P2 ends -> P1 starts handoffs
-  for (const end of p2Ends) {
-    for (const start of p1Starts) {
-      const diff = start - end;
-      if (diff > 0 && diff <= HANDOFF_WINDOW) {
-        handoffCount++;
-        break;
+  // P2 ends → P1 starts
+  for (const p2Sess of p2Sessions) {
+    let bestDelay = Infinity;
+    for (const p1Sess of p1Sessions) {
+      const diff = p1Sess.start - p2Sess.end;
+      if (diff > 0 && diff <= HANDOFF_WINDOW && diff < bestDelay) {
+        bestDelay = diff;
       }
     }
-    totalTransitions++;
+    if (bestDelay < Infinity) {
+      p2ToP1++;
+      handoffDelays.push(bestDelay);
+    }
   }
 
-  // Calculate score based on handoff percentage
+  const handoffCount = p1ToP2 + p2ToP1;
+  const totalTransitions = p1Sessions.length + p2Sessions.length;
+
   if (totalTransitions < 4) {
-    return { score: 0, handoffCount, totalTransitions };
+    return { ...empty, handoffCount, totalTransitions, p1ToP2Count: p1ToP2, p2ToP1Count: p2ToP1, handoffDelays };
   }
 
+  // --- Directionality analysis ---
+  // One-way handoffs (always same person logging off → other logging on) are more suspicious
+  const directionality = handoffCount > 0
+    ? Math.abs(p1ToP2 - p2ToP1) / handoffCount
+    : 0;
+  const dominantDirection = p1ToP2 > p2ToP1
+    ? `${p1.name}→${p2.name}`
+    : p2ToP1 > p1ToP2
+    ? `${p2.name}→${p1.name}`
+    : "balanced";
+
+  // --- Timing consistency ---
+  // If handoff delays are very consistent (e.g., always ~2 min), that's suspicious
+  let avgHandoffDelay = 0;
+  let delayConsistency = 0;
+  if (handoffDelays.length >= 2) {
+    avgHandoffDelay = handoffDelays.reduce((a, b) => a + b, 0) / handoffDelays.length;
+    const variance = handoffDelays.reduce((sum, d) => sum + (d - avgHandoffDelay) ** 2, 0) / handoffDelays.length;
+    const stdDev = Math.sqrt(variance);
+    // Coefficient of variation (lower = more consistent)
+    const cv = avgHandoffDelay > 0 ? stdDev / avgHandoffDelay : 1;
+    // Map CV to 0-1 consistency score (CV of 0 = perfect consistency = 1.0)
+    delayConsistency = Math.max(0, 1 - cv);
+  } else if (handoffDelays.length === 1) {
+    avgHandoffDelay = handoffDelays[0];
+    delayConsistency = 0.5; // Single observation, moderate
+  }
+
+  // --- Session shadowing ---
+  // How well do one player's sessions fill the gaps of the other?
+  // Calculate total time span
+  const allTimes = [...p1Sessions, ...p2Sessions];
+  const timeStart = Math.min(...allTimes.map(s => s.start));
+  const timeEnd = Math.max(...allTimes.map(s => s.end));
+  const totalSpan = timeEnd - timeStart;
+
+  let sessionShadowing = 0;
+  if (totalSpan > 0) {
+    // Calculate total active time for each player
+    const p1Active = p1Sessions.reduce((sum, s) => sum + (s.end - s.start), 0);
+    const p2Active = p2Sessions.reduce((sum, s) => sum + (s.end - s.start), 0);
+    // Calculate overlap between sessions
+    let overlapTime = 0;
+    for (const s1 of p1Sessions) {
+      for (const s2 of p2Sessions) {
+        const overlapStart = Math.max(s1.start, s2.start);
+        const overlapEnd = Math.min(s1.end, s2.end);
+        if (overlapEnd > overlapStart) {
+          overlapTime += overlapEnd - overlapStart;
+        }
+      }
+    }
+    // Perfect shadowing = sessions fill each other's gaps with no overlap
+    // Combined coverage / total span, penalized by overlap
+    const combinedCoverage = Math.min((p1Active + p2Active - overlapTime) / totalSpan, 1);
+    const overlapPenalty = (p1Active + p2Active) > 0 ? 1 - (overlapTime / (p1Active + p2Active)) : 0;
+    sessionShadowing = combinedCoverage * overlapPenalty;
+  }
+
+  // --- Scoring ---
   const handoffPercentage = handoffCount / totalTransitions;
   let score = 0;
 
-  if (handoffPercentage >= 0.5) {
-    score = 40; // Very strong indicator
-  } else if (handoffPercentage >= 0.3) {
-    score = 35;
-  } else if (handoffPercentage >= 0.2) {
-    score = 20;
-  } else if (handoffPercentage >= 0.1) {
-    score = 10;
+  // Base score from handoff percentage
+  if (handoffPercentage >= 0.5) score = 35;
+  else if (handoffPercentage >= 0.3) score = 28;
+  else if (handoffPercentage >= 0.2) score = 18;
+  else if (handoffPercentage >= 0.1) score = 8;
+
+  // Bonus for consistent timing (suspicious: always same delay)
+  if (handoffCount >= 3 && delayConsistency >= 0.7) {
+    score += 10; // Very consistent delays
+  } else if (handoffCount >= 3 && delayConsistency >= 0.5) {
+    score += 5;
   }
 
-  return { score, handoffCount, totalTransitions };
+  // Bonus for session shadowing (sessions perfectly interleave)
+  if (sessionShadowing >= 0.7) {
+    score += 8;
+  } else if (sessionShadowing >= 0.5) {
+    score += 4;
+  }
+
+  // Bonus for one-directional handoffs (always same person switches)
+  if (handoffCount >= 4 && directionality >= 0.8) {
+    score += 5;
+  }
+
+  // Cap at 55 (handoff alone shouldn't dominate)
+  score = Math.min(score, 55);
+
+  return {
+    score, handoffCount, totalTransitions,
+    directionality, dominantDirection,
+    p1ToP2Count: p1ToP2, p2ToP1Count: p2ToP1,
+    avgHandoffDelay, delayConsistency, sessionShadowing,
+    handoffDelays,
+  };
 }
 
 /**
@@ -229,11 +316,26 @@ export function detectAltsAdvanced(
       if (handoffData.score > 0) {
         const weightedScore = Math.round(handoffData.score * config.handoffWeight);
         scoreBreakdown.handoff = weightedScore;
+        const handoffPct = Math.round(handoffData.handoffCount / handoffData.totalTransitions * 100);
+        let evidenceParts = [`${handoffData.handoffCount} of ${handoffData.totalTransitions} transitions are handoffs (${handoffPct}%)`];
+        if (handoffData.delayConsistency >= 0.5) {
+          evidenceParts.push(`avg delay ${Math.round(handoffData.avgHandoffDelay)}s (${Math.round(handoffData.delayConsistency * 100)}% consistent)`);
+        }
+        if (handoffData.dominantDirection !== "balanced") {
+          evidenceParts.push(`mostly ${handoffData.dominantDirection}`);
+        }
+        if (handoffData.sessionShadowing >= 0.5) {
+          evidenceParts.push(`${Math.round(handoffData.sessionShadowing * 100)}% session shadowing`);
+        }
         reasons.push({
           type: "temporal",
-          description: "Handoff pattern detected",
+          description: handoffData.delayConsistency >= 0.7
+            ? "Strong handoff pattern with consistent timing"
+            : handoffData.sessionShadowing >= 0.7
+            ? "Handoff pattern with session shadowing"
+            : "Handoff pattern detected",
           weight: weightedScore,
-          evidence: `${handoffData.handoffCount} of ${handoffData.totalTransitions} session transitions are handoffs (${Math.round(handoffData.handoffCount/handoffData.totalTransitions*100)}%)`,
+          evidence: evidenceParts.join(" · "),
         });
       }
 
