@@ -187,8 +187,8 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { color: "error", title: "Temporal Analysis", description: "Detect accounts that are never online together and find handoff patterns where one player stops and another starts within minutes.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />, delay: 0 },
-              { color: "warning", title: "Stylometry Engine", description: "Function word analysis, character n-grams, and vocabulary complexity metrics (Yule's K, Simpson's D, Brunet's W) to fingerprint writing style.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />, delay: 100 },
-              { color: "accent", title: "Behavioral Profiling", description: "Greeting and farewell style, typo patterns, micro-typing habits, emoticon preferences, and shared unique vocabulary detection.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />, delay: 200 },
+              { color: "warning", title: "Stylometry Engine", description: "Function word analysis, character n-grams, vocabulary complexity (Yule's K, Simpson's D, Brunet's W), sentence structure fingerprinting, and deep punctuation habit analysis.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />, delay: 100 },
+              { color: "accent", title: "Behavioral Profiling", description: "Greeting style, typo patterns, micro-typing habits, emoticon profiling, abbreviation/contraction fingerprinting, word length preferences, and topic interest matching.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />, delay: 200 },
               { color: "success", title: "Social Network Analysis", description: "Map who talks to whom, detect self-talk between accounts, identify conflicts, and find one-way interaction patterns.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />, delay: 300 },
               { color: "info", title: "Similarity Matrix", description: "Interactive heatmap comparing all player pairs simultaneously. Click any cell to open the forensics comparison lab.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />, delay: 400 },
               { color: "warning", title: "Export & Reports", description: "Generate comprehensive JSON data exports, shareable HTML summary reports, and color-coded chat logs for documentation.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />, delay: 500 },
@@ -378,6 +378,10 @@ export default function HomePage() {
               { label: "Cosine Similarity", description: "Vector comparison" },
               { label: "Handoff Detection", description: "Session analysis" },
               { label: "Stylometry", description: "Writing fingerprint" },
+              { label: "Punctuation Fingerprint", description: "16-dimension habits" },
+              { label: "Sentence Structure", description: "Message openers" },
+              { label: "Contraction Profiling", description: "don't vs do not" },
+              { label: "Emoticon Profiling", description: "Position & variety" },
             ].map((badge, i) => (
               <div
                 key={i}
@@ -395,9 +399,10 @@ export default function HomePage() {
             <h3 className="text-lg font-semibold text-text-primary mb-4">How does stylometry work?</h3>
             <p className="text-text-secondary text-sm leading-relaxed mb-4">
               Every person has a unique &ldquo;writing fingerprint&rdquo; &mdash; patterns in how they use
-              function words (the, a, but, so), punctuation, greeting styles, and even typos. These
-              unconscious habits are extremely difficult to fake or change, making them reliable
-              indicators for authorship analysis.
+              function words (the, a, but, so), punctuation habits (ellipsis style, exclamation chains),
+              sentence construction, contraction preferences (don&apos;t vs dont vs do not), greeting styles,
+              and even typos. These unconscious habits are extremely difficult to fake or change,
+              making them reliable indicators for authorship analysis.
             </p>
             <p className="text-text-secondary text-sm leading-relaxed">
               Signal In Chat combines these linguistic markers with temporal analysis (when players
@@ -505,7 +510,7 @@ export default function HomePage() {
               },
               {
                 q: "Can someone fool the detection by changing how they type?",
-                a: "It's very difficult. Function word usage (the, a, but, and, etc.) is unconscious and nearly impossible to consistently change. The system analyzes multiple dimensions simultaneously \u2014 someone would need to alter their timing, vocabulary, punctuation, greeting style, and typo patterns all at once.",
+                a: "It's very difficult. Function word usage (the, a, but, and, etc.) is unconscious and nearly impossible to consistently change. The system analyzes 20+ dimensions simultaneously \u2014 someone would need to alter their timing, vocabulary, punctuation habits, sentence structure, contraction style, emoticon placement, greeting style, and typo patterns all at once.",
               },
               {
                 q: "What's the difference between the algorithm modes?",
