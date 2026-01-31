@@ -7,7 +7,7 @@ import { STOP_WORDS, ALGORITHM_CONFIGS, TYPO_CHECKS, type AlgorithmMode, type Al
 import { cosineSimilarity, distributionSimilarity } from "./utils";
 import { buildRareWordIndex, detectSharedUniqueWords, detectSelfTalk, detectSlips, generateSocialInsights } from "./behavioral";
 import { generateHumanExplanation } from "./playerAnalysis";
-import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams, compareSentencePatterns, compareEmoticonProfiles, comparePunctuationFingerprints } from "./linguistic";
+import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams, compareSentencePatterns, compareEmoticonProfiles, comparePunctuationFingerprints, compareAbbreviationProfiles } from "./linguistic";
 import type { SocialInsight, SlipPattern } from "./types";
 
 /**
@@ -599,6 +599,31 @@ export function detectAltsAdvanced(
             evidence: `Both use: ${sharedSubs.join(", ")}`,
           });
         }
+      }
+
+      // ========== ABBREVIATION/CONTRACTION FINGERPRINT ==========
+
+      const abbrevSim = compareAbbreviationProfiles(p1.abbreviationProfile, p2.abbreviationProfile);
+      if (abbrevSim > 0.85) {
+        const baseScore = 20;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Same contraction and abbreviation habits",
+          weight: weightedScore,
+          evidence: `${Math.round(abbrevSim * 100)}% abbreviation profile match`,
+        });
+      } else if (abbrevSim > 0.75) {
+        const baseScore = 10;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar contraction habits",
+          weight: weightedScore,
+          evidence: `${Math.round(abbrevSim * 100)}% abbreviation profile match`,
+        });
       }
 
       // ========== GREETING/FAREWELL STYLE (NEW) ==========

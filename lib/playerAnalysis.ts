@@ -27,6 +27,7 @@ import {
   analyzeSentencePatterns,
   buildEmoticonProfile,
   buildPunctuationFingerprint,
+  buildAbbreviationProfile,
 } from "./linguistic";
 import { extractTopicFingerprint, findResponsePartners, findMentionedPlayers, extractCommonWords, extractCommonPhrases, extractGameTopics } from "./behavioral";
 import type { GameProfile } from "./gameProfiles";
@@ -128,6 +129,7 @@ export function analyzePlayerAdvanced(
     emoticonProfile: buildEmoticonProfile(texts), // v4.3: Enhanced emoticon profiling
     functionWords: analyzeFunctionWords(texts), // NEW - MOST IMPORTANT!
     punctuationFingerprint: buildPunctuationFingerprint(texts), // v4.3: Deep punctuation analysis
+    abbreviationProfile: buildAbbreviationProfile(texts), // Contraction/abbreviation fingerprint
 
     vocabularyRichness: Math.round(vocabularyRichness * 1000) / 1000,
     hapaxRatio: Math.round(hapaxRatio * 1000) / 1000,
@@ -305,6 +307,18 @@ export function generateHumanExplanation(
     }
     if (sharedSubs.length > 0) {
       parts.push(`- Same text shortcuts: ${sharedSubs.slice(0, 4).map(s => `'${s}'`).join(", ")}`);
+    }
+  }
+
+  // Abbreviation/contraction habits
+  const abbrevReason = reasons.find(r => r.description.includes("contraction") || r.description.includes("abbreviation"));
+  if (abbrevReason && abbrevReason.weight >= 10) {
+    const apostropheMatch = p1.abbreviationProfile.apostropheUsage >= 0 && p2.abbreviationProfile.apostropheUsage >= 0 &&
+      Math.abs(p1.abbreviationProfile.apostropheUsage - p2.abbreviationProfile.apostropheUsage) < 0.15;
+    if (apostropheMatch) {
+      parts.push(`- Same contraction style (both ${p1.abbreviationProfile.apostropheUsage > 0.5 ? "use" : "skip"} apostrophes in don't/cant/etc)`);
+    } else {
+      parts.push(`- Same contraction and abbreviation preferences`);
     }
   }
 

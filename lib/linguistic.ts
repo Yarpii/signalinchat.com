@@ -1019,3 +1019,199 @@ export function comparePunctuationFingerprints(p1: PunctuationFingerprint, p2: P
 
   return Math.max(0, 1 - (totalDiff / totalWeight));
 }
+
+// ============================================================================
+// ABBREVIATION / CONTRACTION FINGERPRINTING
+// ============================================================================
+
+import type { AbbreviationProfile } from "./types";
+
+// Contraction pairs: [contracted form(s), expanded form(s)]
+const CONTRACTION_PAIRS: [string[], string[]][] = [
+  [["don't", "dont"], ["do not"]],
+  [["can't", "cant"], ["cannot", "can not"]],
+  [["won't", "wont"], ["will not"]],
+  [["wouldn't", "wouldnt"], ["would not"]],
+  [["couldn't", "couldnt"], ["could not"]],
+  [["shouldn't", "shouldnt"], ["should not"]],
+  [["didn't", "didnt"], ["did not"]],
+  [["doesn't", "doesnt"], ["does not"]],
+  [["isn't", "isnt"], ["is not"]],
+  [["aren't", "arent"], ["are not"]],
+  [["wasn't", "wasnt"], ["was not"]],
+  [["weren't", "werent"], ["were not"]],
+  [["hasn't", "hasnt"], ["has not"]],
+  [["haven't", "havent"], ["have not"]],
+  [["hadn't", "hadnt"], ["had not"]],
+  [["it's", "its"], ["it is", "it has"]],
+  [["i'm", "im"], ["i am"]],
+  [["i've", "ive"], ["i have"]],
+  [["i'll", "ill"], ["i will"]],
+  [["i'd", "id"], ["i would", "i had"]],
+  [["you're", "youre"], ["you are"]],
+  [["you've", "youve"], ["you have"]],
+  [["you'll", "youll"], ["you will"]],
+  [["they're", "theyre"], ["they are"]],
+  [["they've", "theyve"], ["they have"]],
+  [["they'll", "theyll"], ["they will"]],
+  [["we're", "were"], ["we are"]],
+  [["we've", "weve"], ["we have"]],
+  [["we'll", "well"], ["we will"]],
+  [["that's", "thats"], ["that is", "that has"]],
+  [["there's", "theres"], ["there is", "there has"]],
+  [["what's", "whats"], ["what is", "what has"]],
+  [["who's", "whos"], ["who is", "who has"]],
+  [["let's", "lets"], ["let us"]],
+];
+
+// Informal abbreviations to track
+const INFORMAL_ABBREVS: [string, string][] = [
+  ["gonna", "going to"],
+  ["wanna", "want to"],
+  ["gotta", "got to"],
+  ["kinda", "kind of"],
+  ["sorta", "sort of"],
+  ["dunno", "don't know"],
+  ["lemme", "let me"],
+  ["gimme", "give me"],
+  ["coulda", "could have"],
+  ["shoulda", "should have"],
+  ["woulda", "would have"],
+  ["oughta", "ought to"],
+  ["hafta", "have to"],
+  ["tryna", "trying to"],
+  ["finna", "fixing to"],
+  ["boutta", "about to"],
+  ["idk", "i don't know"],
+  ["imo", "in my opinion"],
+  ["tbh", "to be honest"],
+  ["ngl", "not gonna lie"],
+  ["smh", "shaking my head"],
+  ["brb", "be right back"],
+  ["afk", "away from keyboard"],
+  ["btw", "by the way"],
+  ["omw", "on my way"],
+  ["np", "no problem"],
+  ["ty", "thank you"],
+  ["thx", "thanks"],
+  ["pls", "please"],
+  ["plz", "please"],
+];
+
+// Ambiguous words to skip in contraction detection (too many false positives)
+const AMBIGUOUS_CONTRACTIONS = new Set(["were", "well", "ill", "its", "id", "lets"]);
+
+export function buildAbbreviationProfile(messages: string[]): AbbreviationProfile {
+  const allText = messages.join(" ").toLowerCase();
+  const words = allText.split(/\s+/);
+  const totalWords = words.length;
+
+  let totalContracted = 0;
+  let totalExpanded = 0;
+  let apostropheCount = 0;
+  let noApostropheCount = 0;
+  const contractions = new Map<string, number>();
+
+  for (const [contractedForms, expandedForms] of CONTRACTION_PAIRS) {
+    let contracted = 0;
+    let expanded = 0;
+
+    for (const form of contractedForms) {
+      if (AMBIGUOUS_CONTRACTIONS.has(form)) continue;
+      const regex = new RegExp(`\\b${form.replace("'", "['\\u2019]?")}\\b`, "gi");
+      const matches = allText.match(regex);
+      if (matches) {
+        contracted += matches.length;
+        for (const m of matches) {
+          if (m.includes("'") || m.includes("\u2019")) apostropheCount++;
+          else noApostropheCount++;
+        }
+      }
+    }
+
+    for (const form of expandedForms) {
+      const regex = new RegExp(`\\b${form}\\b`, "gi");
+      const matches = allText.match(regex);
+      if (matches) expanded += matches.length;
+    }
+
+    const total = contracted + expanded;
+    if (total >= 2) {
+      const key = contractedForms[0].replace("'", "");
+      contractions.set(key, contracted / total);
+      totalContracted += contracted;
+      totalExpanded += expanded;
+    }
+  }
+
+  // Informal abbreviations
+  const informalAbbreviations = new Map<string, number>();
+  for (const [abbrev] of INFORMAL_ABBREVS) {
+    const regex = new RegExp(`\\b${abbrev}\\b`, "gi");
+    const matches = allText.match(regex);
+    if (matches && matches.length >= 1) {
+      informalAbbreviations.set(abbrev, totalWords > 0 ? (matches.length / totalWords) * 1000 : 0);
+    }
+  }
+
+  const totalPairs = totalContracted + totalExpanded;
+  const contractionRate = totalPairs >= 3 ? totalContracted / totalPairs : -1;
+  const totalApostrophe = apostropheCount + noApostropheCount;
+  const apostropheUsage = totalApostrophe >= 3 ? apostropheCount / totalApostrophe : -1;
+
+  return {
+    contractionRate,
+    contractions,
+    informalAbbreviations,
+    apostropheUsage,
+    totalContractionPairs: totalPairs,
+  };
+}
+
+export function compareAbbreviationProfiles(p1: AbbreviationProfile, p2: AbbreviationProfile): number {
+  if (p1.totalContractionPairs < 5 || p2.totalContractionPairs < 5) return 0;
+
+  let totalScore = 0;
+  let totalWeight = 0;
+
+  // Overall contraction rate
+  if (p1.contractionRate >= 0 && p2.contractionRate >= 0) {
+    const diff = Math.abs(p1.contractionRate - p2.contractionRate);
+    totalScore += (1 - diff) * 3.0;
+    totalWeight += 3.0;
+  }
+
+  // Apostrophe usage (dont vs don't)
+  if (p1.apostropheUsage >= 0 && p2.apostropheUsage >= 0) {
+    const diff = Math.abs(p1.apostropheUsage - p2.apostropheUsage);
+    totalScore += (1 - diff) * 2.5;
+    totalWeight += 2.5;
+  }
+
+  // Individual contraction preferences
+  const allKeys = new Set([...p1.contractions.keys(), ...p2.contractions.keys()]);
+  let sharedKeys = 0;
+  let contractionDiff = 0;
+  for (const key of allKeys) {
+    if (p1.contractions.has(key) && p2.contractions.has(key)) {
+      sharedKeys++;
+      contractionDiff += Math.abs(p1.contractions.get(key)! - p2.contractions.get(key)!);
+    }
+  }
+  if (sharedKeys >= 3) {
+    const avgDiff = contractionDiff / sharedKeys;
+    totalScore += (1 - avgDiff) * 2.0;
+    totalWeight += 2.0;
+  }
+
+  // Informal abbreviation overlap
+  const allAbbrevs = new Set([...p1.informalAbbreviations.keys(), ...p2.informalAbbreviations.keys()]);
+  const sharedAbbrevs = [...allAbbrevs].filter(a => p1.informalAbbreviations.has(a) && p2.informalAbbreviations.has(a));
+  if (allAbbrevs.size >= 3) {
+    const jaccard = sharedAbbrevs.length / allAbbrevs.size;
+    totalScore += jaccard * 2.0;
+    totalWeight += 2.0;
+  }
+
+  return totalWeight > 0 ? totalScore / totalWeight : 0;
+}

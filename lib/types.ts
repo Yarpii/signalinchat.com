@@ -37,6 +37,7 @@ export interface AdvancedPlayerStats {
   emoticonProfile: EmoticonProfile; // Enhanced emoticon fingerprint
   functionWords: FunctionWordProfile; // NEW: Function word fingerprint (most reliable!)
   punctuationFingerprint: PunctuationFingerprint; // Deep punctuation analysis
+  abbreviationProfile: AbbreviationProfile; // Contraction/abbreviation fingerprint
 
   // Statistical stylometry
   vocabularyRichness: number; // Unique words / total words (TTR)
@@ -214,6 +215,21 @@ export interface PunctuationFingerprint {
   // Special patterns
   tildeUsage: boolean;            // Uses ~ for tone ("okay~", "thanks~")
   slashUsage: number;             // Frequency of / usage
+}
+
+// Abbreviation/contraction fingerprint
+export interface AbbreviationProfile {
+  // Contraction preferences (ratio of contracted vs expanded form, 0-1)
+  // 1.0 = always uses contraction, 0.0 = never uses contraction, -1 = not enough data
+  contractionRate: number;        // Overall: don't vs do not, can't vs cannot, etc.
+  // Specific high-value contraction choices
+  contractions: Map<string, number>; // e.g. "dont_vs_donot" => 0.8 means 80% "don't"
+  // Informal abbreviation preferences
+  informalAbbreviations: Map<string, number>; // "gonna" => frequency per 1000 words
+  // Whether they use apostrophes in contractions
+  apostropheUsage: number;        // % of contractions that include apostrophe (don't vs dont)
+  // Total data points for reliability
+  totalContractionPairs: number;  // How many contraction choices were observed
 }
 
 // Parsed line result
