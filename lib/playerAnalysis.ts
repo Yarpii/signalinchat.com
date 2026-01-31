@@ -162,7 +162,7 @@ export function generateHumanExplanation(
   reasons: AltReason[],
   neverOnlineTogether: boolean,
   sharedRareWords: string[],
-  handoffData: { handoffCount: number; totalTransitions: number },
+  handoffData: { handoffCount: number; totalTransitions: number; avgHandoffDelay?: number; delayConsistency?: number; dominantDirection?: string; sessionShadowing?: number },
   totalDays: number
 ): string {
   const parts: string[] = [];
@@ -178,9 +178,19 @@ export function generateHumanExplanation(
     }
   }
 
-  // Handoff pattern
+  // Handoff pattern (enhanced v4.2)
   if (handoffData.handoffCount >= 3) {
-    parts.push(`- Clear "handoff" pattern: when ${p1.name} stops, ${p2.name} often starts within 5 minutes (detected ${handoffData.handoffCount}x)`);
+    let handoffDesc = `- Clear "handoff" pattern: when one stops, the other starts within 5 minutes (detected ${handoffData.handoffCount}x)`;
+    if (handoffData.delayConsistency && handoffData.delayConsistency >= 0.7 && handoffData.avgHandoffDelay) {
+      handoffDesc += `\n- Suspiciously consistent timing: average ${Math.round(handoffData.avgHandoffDelay)}s delay between sessions`;
+    }
+    if (handoffData.dominantDirection && handoffData.dominantDirection !== "balanced") {
+      handoffDesc += `\n- Handoffs mostly go ${handoffData.dominantDirection}`;
+    }
+    if (handoffData.sessionShadowing && handoffData.sessionShadowing >= 0.7) {
+      handoffDesc += `\n- Sessions almost perfectly fill each other's gaps (${Math.round(handoffData.sessionShadowing * 100)}% coverage)`;
+    }
+    parts.push(handoffDesc);
   }
 
   // Function word analysis (NEW - most reliable)

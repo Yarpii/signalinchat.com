@@ -166,6 +166,15 @@ export interface HandoffResult {
   score: number;
   handoffCount: number;
   totalTransitions: number;
+  // Enhanced handoff data (v4.2)
+  directionality: number;        // 0 = perfectly bidirectional, 1 = always one-way (more suspicious)
+  dominantDirection: string;     // "P1→P2" or "P2→P1" or "balanced"
+  p1ToP2Count: number;           // Handoffs from P1 ending → P2 starting
+  p2ToP1Count: number;           // Handoffs from P2 ending → P1 starting
+  avgHandoffDelay: number;       // Average seconds between session end and next start
+  delayConsistency: number;      // 0-1, how consistent the delays are (1 = very consistent = suspicious)
+  sessionShadowing: number;      // 0-1, how well sessions fill each other's gaps
+  handoffDelays: number[];       // Individual delay values for visualization
 }
 
 // Game topic overlap result
