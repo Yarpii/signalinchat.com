@@ -7,7 +7,7 @@ import { STOP_WORDS, ALGORITHM_CONFIGS, TYPO_CHECKS, type AlgorithmMode, type Al
 import { cosineSimilarity, distributionSimilarity } from "./utils";
 import { buildRareWordIndex, detectSharedUniqueWords, detectSelfTalk, detectSlips, generateSocialInsights } from "./behavioral";
 import { generateHumanExplanation } from "./playerAnalysis";
-import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams } from "./linguistic";
+import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams, compareSentencePatterns, compareEmoticonProfiles, comparePunctuationFingerprints } from "./linguistic";
 import type { SocialInsight, SlipPattern } from "./types";
 
 /**
@@ -600,6 +600,91 @@ export function detectAltsAdvanced(
           description: "Shared typing quirks",
           weight: weightedScore,
           evidence: [...microMatches, ...commonMicroMatches].join(", "),
+        });
+      }
+
+      // ========== SENTENCE STRUCTURE ANALYSIS (v4.3) ==========
+
+      const sentenceSim = compareSentencePatterns(p1.sentencePatterns, p2.sentencePatterns);
+      if (sentenceSim > 0.85) {
+        const baseScore = 20;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Nearly identical sentence structure",
+          weight: weightedScore,
+          evidence: `${Math.round(sentenceSim * 100)}% sentence pattern similarity (fragment rate, question tendency, message openers)`,
+        });
+      } else if (sentenceSim > 0.75) {
+        const baseScore = 10;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar sentence construction habits",
+          weight: weightedScore,
+          evidence: `${Math.round(sentenceSim * 100)}% sentence pattern similarity`,
+        });
+      }
+
+      // ========== ENHANCED EMOTICON PROFILING (v4.3) ==========
+
+      const emoticonSim = compareEmoticonProfiles(p1.emoticonProfile, p2.emoticonProfile);
+      if (emoticonSim > 0.80 && (p1.emoticonProfile.emoteFrequency > 5 || p2.emoticonProfile.emoteFrequency > 5)) {
+        const baseScore = 15;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Matching emoticon usage profile",
+          weight: weightedScore,
+          evidence: `${Math.round(emoticonSim * 100)}% emote similarity (same emotes, frequency, placement)`,
+        });
+      } else if (emoticonSim > 0.65 && (p1.emoticonProfile.emoteFrequency > 5 || p2.emoticonProfile.emoteFrequency > 5)) {
+        const baseScore = 8;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Similar emoticon habits",
+          weight: weightedScore,
+          evidence: `${Math.round(emoticonSim * 100)}% emote similarity`,
+        });
+      }
+
+      // ========== PUNCTUATION FINGERPRINTING (v4.3 - NEW ALGORITHM) ==========
+
+      const punctSim = comparePunctuationFingerprints(p1.punctuationFingerprint, p2.punctuationFingerprint);
+      if (punctSim > 0.85) {
+        const baseScore = 25;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Nearly identical punctuation fingerprint",
+          weight: weightedScore,
+          evidence: `${Math.round(punctSim * 100)}% punctuation similarity (ellipsis, exclamation, dash, comma habits)`,
+        });
+      } else if (punctSim > 0.75) {
+        const baseScore = 15;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar punctuation habits",
+          weight: weightedScore,
+          evidence: `${Math.round(punctSim * 100)}% punctuation similarity`,
+        });
+      } else if (punctSim > 0.65) {
+        const baseScore = 8;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Comparable punctuation style",
+          weight: weightedScore,
+          evidence: `${Math.round(punctSim * 100)}% punctuation similarity`,
         });
       }
 

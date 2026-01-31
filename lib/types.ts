@@ -34,7 +34,9 @@ export interface AdvancedPlayerStats {
   letterSubstitutions: Map<string, number>; // u->you, r->are, etc.
   microPatterns: MicroPatterns; // Detailed micro-patterns
   emoticonStyle: EmoticonStyle; // Emoticon fingerprint
+  emoticonProfile: EmoticonProfile; // Enhanced emoticon fingerprint
   functionWords: FunctionWordProfile; // NEW: Function word fingerprint (most reliable!)
+  punctuationFingerprint: PunctuationFingerprint; // Deep punctuation analysis
 
   // Statistical stylometry
   vocabularyRichness: number; // Unique words / total words (TTR)
@@ -45,7 +47,7 @@ export interface AdvancedPlayerStats {
   avgWordLength: number;
   wordLengthDistribution: number[]; // Distribution of word lengths 1-15+
   messageLengthDistribution: number[]; // NEW: Distribution of message lengths
-  sentencePatterns: string[]; // Common sentence structures
+  sentencePatterns: SentencePattern; // Sentence structure fingerprint
 
   // Behavioral
   commonWords: string[];
@@ -153,6 +155,65 @@ export interface PunctuationStyle {
   doublePunctuation: boolean; // !! or ??
   ellipsisStyle: string; // ... or .. or ...
   commaSpacing: boolean;
+}
+
+// Sentence structure fingerprint
+export interface SentencePattern {
+  // Structure distribution (what % of messages start with each type)
+  startsWithPronoun: number;      // "I think...", "You should..."
+  startsWithVerb: number;         // "Go there", "Think about it"
+  startsWithConjunction: number;  // "But why", "And then"
+  startsWithAdverb: number;       // "Really?", "Actually..."
+  startsWithGreeting: number;     // "Hey", "Hi", "Yo"
+  // Message structure habits
+  fragmentRate: number;           // % of messages that are fragments (1-3 words)
+  questionRate: number;           // % of messages that are questions
+  exclamationRate: number;        // % of messages that are exclamations
+  avgWordsPerMessage: number;     // Average words per message
+  multiSentenceRate: number;      // % of messages with multiple sentences
+}
+
+// Enhanced emoticon fingerprint
+export interface EmoticonProfile {
+  usesNose: boolean;              // :-) vs :)
+  usesEmoji: boolean;             // Unicode emoji
+  commonEmotes: string[];         // Top emotes used
+  emoteFrequency: number;         // Per 100 messages
+  // Enhanced fields
+  emotePositionStart: number;     // % of emotes at message start
+  emotePositionEnd: number;       // % of emotes at message end
+  emotePositionInline: number;    // % of emotes mid-message
+  kaomoji: boolean;               // Uses Japanese-style (╯°□°)╯
+  repeatsEmotes: boolean;         // Repeats emotes like ":) :) :)"
+  uniqueEmoteCount: number;       // Variety of different emotes
+  emoteToWordRatio: number;       // How much of communication is emotes
+}
+
+// Deep punctuation fingerprint
+export interface PunctuationFingerprint {
+  // Ellipsis habits
+  ellipsisFrequency: number;      // Per 100 messages
+  ellipsisLength: number;         // Average dots (2, 3, 4+)
+  trailingEllipsis: number;       // % ending with ...
+  // Exclamation habits
+  exclamationFrequency: number;   // Per 100 messages
+  multiExclamation: number;       // % that use !! or !!!
+  avgExclamationLength: number;   // Average chain length (1, 2, 3+)
+  // Question habits
+  multiQuestion: number;          // % that use ?? or ???
+  rhetoricalQuestions: number;     // Questions not directed at anyone
+  // Dash and parenthetical habits
+  dashFrequency: number;          // Per 100 messages (- or --)
+  parentheticalFrequency: number; // Per 100 messages (text in parens)
+  // Comma habits
+  commasPerMessage: number;       // Average commas per message
+  oxfordComma: boolean;           // Uses "a, b, and c" vs "a, b and c"
+  // Terminal punctuation
+  endsWithPeriod: number;         // % of messages ending with .
+  endsWithNoPunctuation: number;  // % of messages with no terminal punct
+  // Special patterns
+  tildeUsage: boolean;            // Uses ~ for tone ("okay~", "thanks~")
+  slashUsage: number;             // Frequency of / usage
 }
 
 // Parsed line result
