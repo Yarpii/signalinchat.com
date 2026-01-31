@@ -167,6 +167,60 @@ export default function DocsPage() {
               People make consistent typos and have small typing habits (lowercase i, double spaces,
               no capitals, number substitutions) that are hard to change.
             </DocCard>
+            <DocCard
+              title="Sentence Structure Fingerprinting"
+              score="up to +20 points"
+              scoreColor="text-warning"
+            >
+              <p className="mb-3">
+                Classifies how people open their messages &mdash; with pronouns, verbs, conjunctions,
+                adverbs, or greetings. Also tracks fragment rate, question tendency, and multi-sentence
+                habits. Starting messages with conjunctions (&quot;but&quot;, &quot;and&quot;, &quot;so&quot;) is especially distinctive.
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-text-muted">
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Message opener type</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Fragment rate</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Question/exclamation rate</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Multi-sentence tendency</div>
+              </div>
+            </DocCard>
+            <DocCard
+              title="Deep Punctuation Fingerprinting"
+              score="up to +25 points"
+              scoreColor="text-warning"
+            >
+              <p className="mb-3">
+                Analyzes 16 dimensions of punctuation habits that are used unconsciously:
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-text-muted">
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Ellipsis style (.. vs ... vs ....)</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Exclamation chains (! vs !! vs !!!)</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Dash &amp; parenthetical usage</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Oxford comma preference</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Terminal punctuation habits</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Tilde usage (okay~)</div>
+              </div>
+            </DocCard>
+            <DocCard
+              title="Abbreviation &amp; Contraction Fingerprinting"
+              score="up to +20 points"
+              scoreColor="text-warning"
+            >
+              <p className="mb-3">
+                Tracks how players shorten words &mdash; a strong stylometric signal. Compares contraction
+                preferences, apostrophe habits, and informal abbreviation usage.
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-text-muted">
+                <div className="bg-bg-primary/50 rounded px-3 py-2">don&apos;t vs dont vs do not</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">Apostrophe usage rate</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">35 contraction pairs tracked</div>
+                <div className="bg-bg-primary/50 rounded px-3 py-2">30 informal abbrevs (gonna, idk, btw)</div>
+              </div>
+            </DocCard>
+            <DocCard title="Word Length Preferences" score="up to +12 points" scoreColor="text-warning">
+              Compares the distribution of word lengths between players. Someone who
+              consistently uses shorter or longer words will have a distinctive profile.
+            </DocCard>
           </div>
         </section>
 
@@ -186,7 +240,7 @@ export default function DocsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-bg-tertiary rounded-lg p-4">
               <h4 className="font-semibold text-text-primary text-sm mb-2">Message Length</h4>
-              <p className="text-text-secondary text-sm">Consistent message lengths are compared across accounts.</p>
+              <p className="text-text-secondary text-sm">Message and word length distributions are compared across accounts.</p>
             </div>
             <div className="bg-bg-tertiary rounded-lg p-4">
               <h4 className="font-semibold text-text-primary text-sm mb-2">Greeting &amp; Farewell Style</h4>
@@ -199,6 +253,22 @@ export default function DocsPage() {
             <div className="bg-bg-tertiary rounded-lg p-4">
               <h4 className="font-semibold text-text-primary text-sm mb-2">Shared Unique Words</h4>
               <p className="text-text-secondary text-sm">Vocabulary shared exclusively between suspected accounts.</p>
+            </div>
+            <div className="bg-bg-tertiary rounded-lg p-4">
+              <h4 className="font-semibold text-text-primary text-sm mb-2">Enhanced Emoticon Profiling</h4>
+              <p className="text-text-secondary text-sm">Emoticon position (start/end/inline), variety, kaomoji usage, and repetition patterns.</p>
+            </div>
+            <div className="bg-bg-tertiary rounded-lg p-4">
+              <h4 className="font-semibold text-text-primary text-sm mb-2">Topic Fingerprint</h4>
+              <p className="text-text-secondary text-sm">Cosine similarity of topic word frequencies to detect shared interests.</p>
+            </div>
+            <div className="bg-bg-tertiary rounded-lg p-4">
+              <h4 className="font-semibold text-text-primary text-sm mb-2">Letter Substitution Patterns</h4>
+              <p className="text-text-secondary text-sm">Tracks shortcuts like u&rarr;you, r&rarr;are with frequency matching.</p>
+            </div>
+            <div className="bg-bg-tertiary rounded-lg p-4">
+              <h4 className="font-semibold text-text-primary text-sm mb-2">Activity Rhythm</h4>
+              <p className="text-text-secondary text-sm">Compares time-of-day patterns and messaging burstiness between accounts.</p>
             </div>
           </div>
         </section>
@@ -273,7 +343,7 @@ export default function DocsPage() {
                 </tr>
                 <tr className="border-b border-border/50">
                   <td className="py-3 pr-4"><span className="font-mono text-xs bg-accent/10 text-accent px-2 py-0.5 rounded">linguistic</span></td>
-                  <td className="py-3 pr-4">60</td>
+                  <td className="py-3 pr-4">70</td>
                   <td className="py-3">Emphasis on writing style analysis</td>
                 </tr>
                 <tr>
@@ -320,7 +390,7 @@ export default function DocsPage() {
         </section>
 
         <div className="mt-10 text-center text-sm text-text-muted">
-          <p>Signal In Chat &mdash; Chat Forensics Analyzer v4.1</p>
+          <p>Signal In Chat &mdash; Chat Forensics Analyzer v4.4</p>
         </div>
       </div>
     </div>
