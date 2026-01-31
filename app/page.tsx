@@ -299,19 +299,33 @@ export default function HomePage() {
               </p>
             </a>
 
-            <div className={`bg-bg-secondary rounded-2xl border border-border/50 p-8 text-center relative overflow-hidden ${games.inView ? "animate-fade-in-up delay-200" : "opacity-0"}`}>
-              <div className="absolute inset-0 bg-bg-primary/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
-                <span className="px-4 py-2 bg-warning/15 border border-warning/30 text-warning text-sm font-semibold rounded-full">COMING SOON</span>
+            <div className={`group bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden transition-all duration-300 hover:shadow-lg ${games.inView ? "animate-fade-in-up delay-200" : "opacity-0"}`}>
+              {/* Gradient background on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/15 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              {/* Top accent line */}
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-500 opacity-30" />
+
+              <div className="relative">
+                <div className="flex justify-end mb-3">
+                  <span className="px-2.5 py-1 bg-bg-tertiary border border-border rounded-full text-text-muted text-[10px] font-semibold uppercase tracking-wider group-hover:border-warning/30 group-hover:text-warning group-hover:bg-warning/10 transition-all duration-300">
+                    Soon
+                  </span>
+                </div>
+                <div className="w-16 h-16 bg-bg-tertiary rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-8 h-8 text-text-muted group-hover:text-indigo-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-text-primary mb-2">Discord</h3>
+                <p className="text-text-muted text-sm">
+                  Analyze exported Discord server chat logs for the same forensic patterns.
+                </p>
+                <div className="flex justify-center gap-1.5 mt-4">
+                  {["Stylometry", "Temporal", "Network"].map((f) => (
+                    <span key={f} className="px-2 py-0.5 bg-bg-tertiary rounded text-[10px] text-text-muted font-medium">{f}</span>
+                  ))}
+                </div>
               </div>
-              <div className="w-16 h-16 bg-bg-tertiary rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-text-primary mb-2">Discord</h3>
-              <p className="text-text-secondary text-sm">
-                Analyze exported Discord server chat logs for the same forensic patterns.
-              </p>
             </div>
 
             <a
