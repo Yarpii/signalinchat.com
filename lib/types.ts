@@ -34,7 +34,10 @@ export interface AdvancedPlayerStats {
   letterSubstitutions: Map<string, number>; // u->you, r->are, etc.
   microPatterns: MicroPatterns; // Detailed micro-patterns
   emoticonStyle: EmoticonStyle; // Emoticon fingerprint
+  emoticonProfile: EmoticonProfile; // Enhanced emoticon fingerprint
   functionWords: FunctionWordProfile; // NEW: Function word fingerprint (most reliable!)
+  punctuationFingerprint: PunctuationFingerprint; // Deep punctuation analysis
+  abbreviationProfile: AbbreviationProfile; // Contraction/abbreviation fingerprint
 
   // Statistical stylometry
   vocabularyRichness: number; // Unique words / total words (TTR)
@@ -45,7 +48,7 @@ export interface AdvancedPlayerStats {
   avgWordLength: number;
   wordLengthDistribution: number[]; // Distribution of word lengths 1-15+
   messageLengthDistribution: number[]; // NEW: Distribution of message lengths
-  sentencePatterns: string[]; // Common sentence structures
+  sentencePatterns: SentencePattern; // Sentence structure fingerprint
 
   // Behavioral
   commonWords: string[];
@@ -153,6 +156,79 @@ export interface PunctuationStyle {
   doublePunctuation: boolean; // !! or ??
   ellipsisStyle: string; // ... or .. or ...
   commaSpacing: boolean;
+}
+
+// Sentence structure fingerprint
+export interface SentencePattern {
+  // Structure distribution (what % of messages start with each type)
+  startsWithPronoun: number;      // "I think...", "You should..."
+  startsWithVerb: number;         // "Go there", "Think about it"
+  startsWithConjunction: number;  // "But why", "And then"
+  startsWithAdverb: number;       // "Really?", "Actually..."
+  startsWithGreeting: number;     // "Hey", "Hi", "Yo"
+  // Message structure habits
+  fragmentRate: number;           // % of messages that are fragments (1-3 words)
+  questionRate: number;           // % of messages that are questions
+  exclamationRate: number;        // % of messages that are exclamations
+  avgWordsPerMessage: number;     // Average words per message
+  multiSentenceRate: number;      // % of messages with multiple sentences
+}
+
+// Enhanced emoticon fingerprint
+export interface EmoticonProfile {
+  usesNose: boolean;              // :-) vs :)
+  usesEmoji: boolean;             // Unicode emoji
+  commonEmotes: string[];         // Top emotes used
+  emoteFrequency: number;         // Per 100 messages
+  // Enhanced fields
+  emotePositionStart: number;     // % of emotes at message start
+  emotePositionEnd: number;       // % of emotes at message end
+  emotePositionInline: number;    // % of emotes mid-message
+  kaomoji: boolean;               // Uses Japanese-style (╯°□°)╯
+  repeatsEmotes: boolean;         // Repeats emotes like ":) :) :)"
+  uniqueEmoteCount: number;       // Variety of different emotes
+  emoteToWordRatio: number;       // How much of communication is emotes
+}
+
+// Deep punctuation fingerprint
+export interface PunctuationFingerprint {
+  // Ellipsis habits
+  ellipsisFrequency: number;      // Per 100 messages
+  ellipsisLength: number;         // Average dots (2, 3, 4+)
+  trailingEllipsis: number;       // % ending with ...
+  // Exclamation habits
+  exclamationFrequency: number;   // Per 100 messages
+  multiExclamation: number;       // % that use !! or !!!
+  avgExclamationLength: number;   // Average chain length (1, 2, 3+)
+  // Question habits
+  multiQuestion: number;          // % that use ?? or ???
+  // Dash and parenthetical habits
+  dashFrequency: number;          // Per 100 messages (- or --)
+  parentheticalFrequency: number; // Per 100 messages (text in parens)
+  // Comma habits
+  commasPerMessage: number;       // Average commas per message
+  oxfordComma: boolean;           // Uses "a, b, and c" vs "a, b and c"
+  // Terminal punctuation
+  endsWithPeriod: number;         // % of messages ending with .
+  endsWithNoPunctuation: number;  // % of messages with no terminal punct
+  // Special patterns
+  tildeUsage: boolean;            // Uses ~ for tone ("okay~", "thanks~")
+  slashUsage: number;             // Frequency of / usage
+}
+
+// Abbreviation/contraction fingerprint
+export interface AbbreviationProfile {
+  // Contraction preferences (ratio of contracted vs expanded form, 0-1)
+  // 1.0 = always uses contraction, 0.0 = never uses contraction, -1 = not enough data
+  contractionRate: number;        // Overall: don't vs do not, can't vs cannot, etc.
+  // Specific high-value contraction choices
+  contractions: Map<string, number>; // e.g. "dont_vs_donot" => 0.8 means 80% "don't"
+  // Informal abbreviation preferences
+  informalAbbreviations: Map<string, number>; // "gonna" => frequency per 1000 words
+  // Whether they use apostrophes in contractions
+  apostropheUsage: number;        // % of contractions that include apostrophe (don't vs dont)
+  // Total data points for reliability
+  totalContractionPairs: number;  // How many contraction choices were observed
 }
 
 // Parsed line result

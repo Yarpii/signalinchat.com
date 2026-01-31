@@ -23,6 +23,11 @@ import {
   detectGreetingStyle,
   detectFarewellStyle,
   extractCommonEnders,
+  // v4.3 imports
+  analyzeSentencePatterns,
+  buildEmoticonProfile,
+  buildPunctuationFingerprint,
+  buildAbbreviationProfile,
 } from "./linguistic";
 import { extractTopicFingerprint, findResponsePartners, findMentionedPlayers, extractCommonWords, extractCommonPhrases, extractGameTopics } from "./behavioral";
 import type { GameProfile } from "./gameProfiles";
@@ -121,7 +126,10 @@ export function analyzePlayerAdvanced(
     letterSubstitutions: detectLetterSubstitutions(texts),
     microPatterns: detectMicroPatterns(texts),
     emoticonStyle: detectEmoticonStyle(texts),
+    emoticonProfile: buildEmoticonProfile(texts), // v4.3: Enhanced emoticon profiling
     functionWords: analyzeFunctionWords(texts), // NEW - MOST IMPORTANT!
+    punctuationFingerprint: buildPunctuationFingerprint(texts), // v4.3: Deep punctuation analysis
+    abbreviationProfile: buildAbbreviationProfile(texts), // Contraction/abbreviation fingerprint
 
     vocabularyRichness: Math.round(vocabularyRichness * 1000) / 1000,
     hapaxRatio: Math.round(hapaxRatio * 1000) / 1000,
@@ -133,7 +141,7 @@ export function analyzePlayerAdvanced(
       : 0,
     wordLengthDistribution: calculateWordLengthDistribution(cleanWords),
     messageLengthDistribution: calculateMessageLengthDistribution(texts), // NEW
-    sentencePatterns: [], // Could expand later
+    sentencePatterns: analyzeSentencePatterns(texts), // v4.3: Sentence structure fingerprint
 
     commonWords: extractCommonWords(texts),
     commonPhrases: extractCommonPhrases(texts),
@@ -256,12 +264,68 @@ export function generateHumanExplanation(
     parts.push(`- Identical writing habits: ${microMatches.join(", ")}`);
   }
 
-  // Emoticon style
-  if (p1.emoticonStyle.commonEmotes.length > 0 && p2.emoticonStyle.commonEmotes.length > 0) {
+  // Sentence structure (v4.3)
+  const sentenceReason = reasons.find(r => r.description.includes("sentence structure") || r.description.includes("sentence construction"));
+  if (sentenceReason && sentenceReason.weight >= 15) {
+    parts.push(`- Nearly identical sentence construction habits (fragment rate, question tendency, how they open messages)`);
+  }
+
+  // Punctuation fingerprint (v4.3)
+  const punctReason = reasons.find(r => r.description.includes("punctuation fingerprint") || r.description.includes("punctuation habits"));
+  if (punctReason && punctReason.weight >= 15) {
+    parts.push(`- Same punctuation habits (ellipsis style, exclamation chains, comma usage, terminal punctuation)`);
+  }
+
+  // Emoticon style (v4.3 enhanced)
+  const emoticonReason = reasons.find(r => r.description.includes("emoticon"));
+  if (emoticonReason && emoticonReason.weight >= 10) {
+    const sharedEmotes = p1.emoticonProfile.commonEmotes.filter(e => p2.emoticonProfile.commonEmotes.includes(e));
+    if (sharedEmotes.length >= 2) {
+      parts.push(`- Same emoticon preferences: ${sharedEmotes.slice(0, 4).join(", ")} (including placement and frequency)`);
+    } else {
+      parts.push(`- Similar emoticon usage patterns (frequency, placement, variety)`);
+    }
+  } else if (p1.emoticonStyle.commonEmotes.length > 0 && p2.emoticonStyle.commonEmotes.length > 0) {
     const sharedEmotes = p1.emoticonStyle.commonEmotes.filter(e => p2.emoticonStyle.commonEmotes.includes(e));
     if (sharedEmotes.length >= 3) {
       parts.push(`- Same emoticons: ${sharedEmotes.slice(0, 4).join(", ")}`);
     }
+  }
+
+  // Word length preferences
+  const wordLenReason = reasons.find(r => r.description.includes("word length"));
+  if (wordLenReason) {
+    parts.push(`- Same word length preferences (tendency toward short/long words matches)`);
+  }
+
+  // Letter substitution habits
+  const letterSubReason = reasons.find(r => r.description.includes("letter substitution"));
+  if (letterSubReason) {
+    const sharedSubs: string[] = [];
+    for (const [sub] of p1.letterSubstitutions) {
+      if (p2.letterSubstitutions.has(sub)) sharedSubs.push(sub);
+    }
+    if (sharedSubs.length > 0) {
+      parts.push(`- Same text shortcuts: ${sharedSubs.slice(0, 4).map(s => `'${s}'`).join(", ")}`);
+    }
+  }
+
+  // Abbreviation/contraction habits
+  const abbrevReason = reasons.find(r => r.description.includes("contraction") || r.description.includes("abbreviation"));
+  if (abbrevReason && abbrevReason.weight >= 10) {
+    const apostropheMatch = p1.abbreviationProfile.apostropheUsage >= 0 && p2.abbreviationProfile.apostropheUsage >= 0 &&
+      Math.abs(p1.abbreviationProfile.apostropheUsage - p2.abbreviationProfile.apostropheUsage) < 0.15;
+    if (apostropheMatch) {
+      parts.push(`- Same contraction style (both ${p1.abbreviationProfile.apostropheUsage > 0.5 ? "use" : "skip"} apostrophes in don't/cant/etc)`);
+    } else {
+      parts.push(`- Same contraction and abbreviation preferences`);
+    }
+  }
+
+  // Topic fingerprint
+  const topicReason = reasons.find(r => r.description.includes("topic interest"));
+  if (topicReason) {
+    parts.push(`- Talk about the same topics with similar frequency`);
   }
 
   if (parts.length <= 1) {

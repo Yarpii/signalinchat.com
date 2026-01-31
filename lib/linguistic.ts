@@ -2,7 +2,7 @@
 // CHAT ANALYZER - LINGUISTIC FINGERPRINTING
 // ============================================================================
 
-import type { MicroPatterns, EmoticonStyle, PunctuationStyle, FunctionWordProfile, ActivityPattern } from "./types";
+import type { MicroPatterns, EmoticonStyle, EmoticonProfile, PunctuationStyle, PunctuationFingerprint, SentencePattern, FunctionWordProfile, ActivityPattern } from "./types";
 import { TYPO_CHECKS, LETTER_SUBSTITUTION_PATTERNS, EMOTE_PATTERNS } from "./constants";
 
 // ============================================================================
@@ -621,4 +621,598 @@ export function compareWordBigrams(b1: Map<string, number>, b2: Map<string, numb
 
   const union = set1.size + set2.size - intersection;
   return union > 0 ? intersection / union : 0;
+}
+
+// ============================================================================
+// SENTENCE STRUCTURE ANALYSIS
+// ============================================================================
+
+const COMMON_PRONOUNS = new Set(["i", "you", "he", "she", "it", "we", "they", "me", "my", "your", "his", "her", "its", "our", "their", "who", "what", "this", "that", "these", "those"]);
+const COMMON_CONJUNCTIONS = new Set(["and", "but", "or", "so", "because", "although", "though", "while", "if", "when", "unless", "since", "yet", "nor"]);
+const COMMON_ADVERBS = new Set(["really", "actually", "basically", "literally", "honestly", "seriously", "obviously", "probably", "maybe", "definitely", "certainly", "apparently", "clearly", "simply", "just", "well", "also", "still", "even", "already", "never", "always", "sometimes"]);
+const COMMON_VERBS = new Set(["go", "get", "make", "do", "try", "look", "come", "take", "give", "keep", "let", "help", "tell", "show", "stop", "run", "wait", "check", "add", "use", "buy", "sell", "kill", "join", "leave", "put", "set", "move"]);
+const GREETING_WORDS = new Set(["hi", "hey", "hello", "yo", "sup", "hiya", "heya", "hola", "greetings", "morning", "evening", "afternoon", "howdy"]);
+
+/**
+ * Analyze sentence structure patterns for forensic fingerprinting.
+ * How someone constructs messages (fragments vs full sentences, question tendency,
+ * what they start with) is an unconscious habit and hard to fake.
+ */
+export function analyzeSentencePatterns(messages: string[]): SentencePattern {
+  if (messages.length === 0) {
+    return {
+      startsWithPronoun: 0, startsWithVerb: 0, startsWithConjunction: 0,
+      startsWithAdverb: 0, startsWithGreeting: 0, fragmentRate: 0,
+      questionRate: 0, exclamationRate: 0, avgWordsPerMessage: 0, multiSentenceRate: 0,
+    };
+  }
+
+  let pronounStart = 0;
+  let verbStart = 0;
+  let conjunctionStart = 0;
+  let adverbStart = 0;
+  let greetingStart = 0;
+  let fragments = 0;
+  let questions = 0;
+  let exclamations = 0;
+  let multiSentence = 0;
+  let totalWords = 0;
+
+  for (const msg of messages) {
+    const trimmed = msg.trim();
+    if (trimmed.length === 0) continue;
+
+    const words = trimmed.split(/\s+/);
+    totalWords += words.length;
+    const firstWord = words[0].toLowerCase().replace(/[^a-z]/g, "");
+
+    // Classify what the message starts with
+    if (GREETING_WORDS.has(firstWord)) greetingStart++;
+    else if (COMMON_PRONOUNS.has(firstWord)) pronounStart++;
+    else if (COMMON_CONJUNCTIONS.has(firstWord)) conjunctionStart++;
+    else if (COMMON_ADVERBS.has(firstWord)) adverbStart++;
+    else if (COMMON_VERBS.has(firstWord)) verbStart++;
+
+    // Fragment detection (1-3 words, no sentence punctuation inside)
+    if (words.length <= 3) fragments++;
+
+    // Question / exclamation detection
+    if (trimmed.endsWith("?") || trimmed.endsWith("??") || trimmed.endsWith("???")) questions++;
+    if (trimmed.endsWith("!") || trimmed.endsWith("!!") || trimmed.endsWith("!!!")) exclamations++;
+
+    // Multi-sentence detection (contains . or ! or ? followed by a capital letter or space+capital)
+    if (/[.!?]\s+[A-Z]/.test(trimmed)) multiSentence++;
+  }
+
+  const total = messages.length;
+  return {
+    startsWithPronoun: Math.round((pronounStart / total) * 1000) / 1000,
+    startsWithVerb: Math.round((verbStart / total) * 1000) / 1000,
+    startsWithConjunction: Math.round((conjunctionStart / total) * 1000) / 1000,
+    startsWithAdverb: Math.round((adverbStart / total) * 1000) / 1000,
+    startsWithGreeting: Math.round((greetingStart / total) * 1000) / 1000,
+    fragmentRate: Math.round((fragments / total) * 1000) / 1000,
+    questionRate: Math.round((questions / total) * 1000) / 1000,
+    exclamationRate: Math.round((exclamations / total) * 1000) / 1000,
+    avgWordsPerMessage: Math.round((totalWords / total) * 10) / 10,
+    multiSentenceRate: Math.round((multiSentence / total) * 1000) / 1000,
+  };
+}
+
+/**
+ * Compare sentence patterns between two players - returns similarity 0-1
+ */
+export function compareSentencePatterns(p1: SentencePattern, p2: SentencePattern): number {
+  // Weight features by discriminative power
+  const features: { key: keyof SentencePattern; weight: number }[] = [
+    { key: "startsWithPronoun", weight: 1.5 },     // Strong habit
+    { key: "startsWithConjunction", weight: 1.8 },  // Very distinctive
+    { key: "startsWithAdverb", weight: 1.2 },
+    { key: "startsWithVerb", weight: 1.0 },
+    { key: "startsWithGreeting", weight: 1.0 },     // Greeting frequency as opener
+    { key: "fragmentRate", weight: 1.5 },            // Strong habit
+    { key: "questionRate", weight: 1.3 },
+    { key: "exclamationRate", weight: 1.0 },
+    { key: "avgWordsPerMessage", weight: 1.3 },      // Message verbosity
+    { key: "multiSentenceRate", weight: 1.2 },
+  ];
+
+  let totalDiff = 0;
+  let totalWeight = 0;
+
+  for (const { key, weight } of features) {
+    const v1 = p1[key];
+    const v2 = p2[key];
+    const maxVal = Math.max(v1, v2, 0.05); // Avoid division by near-zero
+    const diff = Math.abs(v1 - v2) / maxVal;
+    totalDiff += diff * weight;
+    totalWeight += weight;
+  }
+
+  return Math.max(0, 1 - (totalDiff / totalWeight));
+}
+
+// ============================================================================
+// ENHANCED EMOTICON PROFILING
+// ============================================================================
+
+/**
+ * Build a detailed emoticon usage profile.
+ * Where someone places emotes, how many unique ones they use, and whether
+ * they repeat them are all unconscious communication habits.
+ */
+export function buildEmoticonProfile(messages: string[]): EmoticonProfile {
+  const allText = messages.join(" ");
+  const totalMessages = messages.length || 1;
+
+  // Basic detection (reuse existing logic)
+  const noseEmotes = (allText.match(/:-[)(/\\|DPp]/g) || []).length;
+  const noNoseEmotes = (allText.match(/(?<!:):[)(/\\|DPp]/g) || []).length;
+  const emojiCount = (allText.match(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu) || []).length;
+
+  // Track found emotes
+  const foundEmotes: string[] = [];
+  let totalEmoteCount = 0;
+  for (const ep of EMOTE_PATTERNS) {
+    const matches = allText.match(ep.pattern);
+    if (matches && matches.length > 0) {
+      foundEmotes.push(ep.name);
+      totalEmoteCount += matches.length;
+    }
+  }
+
+  // Position analysis: where do emotes appear in messages?
+  let posStart = 0;
+  let posEnd = 0;
+  let posInline = 0;
+  let repeatedEmoteMessages = 0;
+  const totalWords = allText.split(/\s+/).length || 1;
+
+  // Kaomoji detection
+  const kaomojiPattern = /[\(（][\s]*[°╯╰ᕙᕕ☞☜✧✦]*[\s]*[□○●◕▽△▼◠◡╥ω°・ᗒᗕ]*[\s]*[□○●◕▽△▼◠◡╥ω°・ᗒᗕ]*[\s]*[°╯╰ᕙᕕ☞☜✧✦]*[\s]*[\)）]/g;
+  const hasKaomoji = kaomojiPattern.test(allText);
+
+  // Broad emote pattern for position detection
+  const emoteRegex = /(?:x[Dd]+|:[)(/\\|DPp]|:-[)(/\\|DPp]|;\)|<3|\^\^|:3|[Dd]:|\blo+l\b|\blmao\b|\bhaha+\b|\bhehe+\b|\brofl\b)/gi;
+
+  for (const msg of messages) {
+    const trimmed = msg.trim();
+    const emoteMatches = [...trimmed.matchAll(emoteRegex)];
+    if (emoteMatches.length === 0) continue;
+
+    // Check position of first and last emote
+    const firstIndex = emoteMatches[0].index || 0;
+    const lastMatch = emoteMatches[emoteMatches.length - 1];
+    const lastIndex = (lastMatch.index || 0) + lastMatch[0].length;
+
+    if (firstIndex <= 2) posStart++;
+    if (lastIndex >= trimmed.length - 2) posEnd++;
+    if (emoteMatches.length > 0 && firstIndex > 2 && lastIndex < trimmed.length - 2) posInline++;
+
+    // Repeated emote detection (same emote appears 2+ times in one message)
+    const emoteNames = emoteMatches.map(m => m[0].toLowerCase());
+    const emoteSet = new Set(emoteNames);
+    if (emoteNames.length > emoteSet.size) repeatedEmoteMessages++;
+  }
+
+  const totalPositioned = posStart + posEnd + posInline || 1;
+
+  return {
+    usesNose: noseEmotes > noNoseEmotes && noseEmotes >= 2,
+    usesEmoji: emojiCount >= 3,
+    commonEmotes: foundEmotes.slice(0, 5),
+    emoteFrequency: Math.round((totalEmoteCount / totalMessages) * 100),
+    emotePositionStart: Math.round((posStart / totalPositioned) * 1000) / 1000,
+    emotePositionEnd: Math.round((posEnd / totalPositioned) * 1000) / 1000,
+    emotePositionInline: Math.round((posInline / totalPositioned) * 1000) / 1000,
+    kaomoji: hasKaomoji,
+    repeatsEmotes: repeatedEmoteMessages >= 3,
+    uniqueEmoteCount: foundEmotes.length,
+    emoteToWordRatio: Math.round((totalEmoteCount / totalWords) * 1000) / 1000,
+  };
+}
+
+/**
+ * Compare emoticon profiles - returns similarity 0-1
+ */
+export function compareEmoticonProfiles(p1: EmoticonProfile, p2: EmoticonProfile): number {
+  let score = 0;
+  let maxScore = 0;
+
+  // Shared common emotes (Jaccard)
+  const set1 = new Set(p1.commonEmotes);
+  const set2 = new Set(p2.commonEmotes);
+  let emoteIntersection = 0;
+  for (const e of set1) { if (set2.has(e)) emoteIntersection++; }
+  const emoteUnion = set1.size + set2.size - emoteIntersection;
+  const emoteJaccard = emoteUnion > 0 ? emoteIntersection / emoteUnion : 0;
+  score += emoteJaccard * 3; // Weight: 3
+  maxScore += 3;
+
+  // Emote frequency similarity
+  const maxFreq = Math.max(p1.emoteFrequency, p2.emoteFrequency, 1);
+  const freqDiff = Math.abs(p1.emoteFrequency - p2.emoteFrequency) / maxFreq;
+  score += (1 - freqDiff) * 2;
+  maxScore += 2;
+
+  // Position preference similarity
+  const posDiff = Math.abs(p1.emotePositionEnd - p2.emotePositionEnd) +
+    Math.abs(p1.emotePositionStart - p2.emotePositionStart);
+  score += Math.max(0, 1 - posDiff) * 1.5;
+  maxScore += 1.5;
+
+  // Boolean matches
+  if (p1.usesNose === p2.usesNose) score += 1;
+  maxScore += 1;
+  if (p1.kaomoji === p2.kaomoji && (p1.kaomoji || p2.kaomoji)) score += 1.5; // Distinctive
+  maxScore += 1.5;
+  if (p1.repeatsEmotes === p2.repeatsEmotes) score += 0.5;
+  maxScore += 0.5;
+
+  // Variety similarity
+  const varietyDiff = Math.abs(p1.uniqueEmoteCount - p2.uniqueEmoteCount);
+  score += Math.max(0, 1 - varietyDiff / 5) * 1;
+  maxScore += 1;
+
+  return maxScore > 0 ? score / maxScore : 0;
+}
+
+// ============================================================================
+// DEEP PUNCTUATION FINGERPRINTING
+// ============================================================================
+
+/**
+ * Build a deep punctuation fingerprint.
+ * How someone uses ellipses, exclamations, dashes, parentheticals, and
+ * terminal punctuation is surprisingly distinctive and hard to consciously fake.
+ */
+export function buildPunctuationFingerprint(messages: string[]): PunctuationFingerprint {
+  const total = messages.length || 1;
+
+  let ellipsisCount = 0;
+  let totalEllipsisDots = 0;
+  let ellipsisMsgCount = 0;
+  let trailingEllipsis = 0;
+
+  let exclamationCount = 0;
+  let multiExclamation = 0;
+  let totalExclChainLength = 0;
+  let exclChainCount = 0;
+
+  let multiQuestion = 0;
+  let questionCount = 0;
+
+  let dashCount = 0;
+  let parentheticalCount = 0;
+  let totalCommas = 0;
+  let endsWithPeriod = 0;
+  let endsWithNoPunct = 0;
+  let tildeCount = 0;
+  let slashCount = 0;
+  let oxfordYes = 0;
+  let oxfordNo = 0;
+
+  for (const msg of messages) {
+    const trimmed = msg.trim();
+
+    // Ellipsis analysis
+    const ellipsisMatches = trimmed.match(/\.{2,}/g);
+    if (ellipsisMatches) {
+      ellipsisCount += ellipsisMatches.length;
+      ellipsisMsgCount++;
+      for (const m of ellipsisMatches) {
+        totalEllipsisDots += m.length;
+      }
+    }
+    if (/\.{2,}\s*$/.test(trimmed)) trailingEllipsis++;
+    if (/…/.test(trimmed)) {
+      ellipsisCount++;
+      ellipsisMsgCount++;
+      totalEllipsisDots += 3;
+    }
+
+    // Exclamation analysis
+    const exclMatches = trimmed.match(/!+/g);
+    if (exclMatches) {
+      for (const m of exclMatches) {
+        exclamationCount++;
+        totalExclChainLength += m.length;
+        exclChainCount++;
+        if (m.length >= 2) multiExclamation++;
+      }
+    }
+
+    // Question analysis
+    if (trimmed.includes("?")) questionCount++;
+    const qMatches = trimmed.match(/\?{2,}/g);
+    if (qMatches) multiQuestion++;
+
+    // Dash usage (-- or — or isolated -)
+    if (/\s-\s|--|—/.test(trimmed)) dashCount++;
+
+    // Parenthetical usage
+    if (/\([^)]+\)/.test(trimmed)) parentheticalCount++;
+
+    // Comma count
+    const commas = (trimmed.match(/,/g) || []).length;
+    totalCommas += commas;
+
+    // Terminal punctuation
+    const lastChar = trimmed.slice(-1);
+    if (lastChar === ".") endsWithPeriod++;
+    if (!/[.!?…~]$/.test(trimmed)) endsWithNoPunct++;
+
+    // Tilde
+    if (/~/.test(trimmed)) tildeCount++;
+
+    // Slash (for expressions like "lol/cry", "yes/no")
+    if (/[a-z]\/[a-z]/i.test(trimmed)) slashCount++;
+
+    // Oxford comma detection: look for "x, y, and z" vs "x, y and z"
+    const oxfordMatch = trimmed.match(/\w+,\s+\w+,?\s+and\s+\w+/i);
+    if (oxfordMatch) {
+      if (/,\s+and\b/.test(oxfordMatch[0])) oxfordYes++;
+      else oxfordNo++;
+    }
+  }
+
+  return {
+    ellipsisFrequency: Math.round((ellipsisMsgCount / total) * 100 * 10) / 10,
+    ellipsisLength: ellipsisCount > 0 ? Math.round((totalEllipsisDots / ellipsisCount) * 10) / 10 : 0,
+    trailingEllipsis: Math.round((trailingEllipsis / total) * 1000) / 1000,
+    exclamationFrequency: Math.round((exclamationCount / total) * 100 * 10) / 10,
+    multiExclamation: exclChainCount > 0 ? Math.round((multiExclamation / exclChainCount) * 1000) / 1000 : 0,
+    avgExclamationLength: exclChainCount > 0 ? Math.round((totalExclChainLength / exclChainCount) * 10) / 10 : 0,
+    multiQuestion: questionCount > 0 ? Math.round((multiQuestion / questionCount) * 1000) / 1000 : 0,
+    dashFrequency: Math.round((dashCount / total) * 100 * 10) / 10,
+    parentheticalFrequency: Math.round((parentheticalCount / total) * 100 * 10) / 10,
+    commasPerMessage: Math.round((totalCommas / total) * 100) / 100,
+    oxfordComma: oxfordYes > oxfordNo && (oxfordYes + oxfordNo) >= 2,
+    endsWithPeriod: Math.round((endsWithPeriod / total) * 1000) / 1000,
+    endsWithNoPunctuation: Math.round((endsWithNoPunct / total) * 1000) / 1000,
+    tildeUsage: tildeCount >= 3,
+    slashUsage: Math.round((slashCount / total) * 100 * 10) / 10,
+  };
+}
+
+/**
+ * Compare punctuation fingerprints - returns similarity 0-1
+ * Punctuation habits are unconscious and surprisingly distinctive.
+ */
+export function comparePunctuationFingerprints(p1: PunctuationFingerprint, p2: PunctuationFingerprint): number {
+  // Weight features by discriminative power
+  const numericFeatures: { v1: number; v2: number; weight: number; maxRange: number }[] = [
+    { v1: p1.ellipsisFrequency, v2: p2.ellipsisFrequency, weight: 2.0, maxRange: 50 },
+    { v1: p1.ellipsisLength, v2: p2.ellipsisLength, weight: 1.5, maxRange: 3 },
+    { v1: p1.trailingEllipsis, v2: p2.trailingEllipsis, weight: 1.5, maxRange: 0.5 },
+    { v1: p1.exclamationFrequency, v2: p2.exclamationFrequency, weight: 1.5, maxRange: 50 },
+    { v1: p1.multiExclamation, v2: p2.multiExclamation, weight: 1.8, maxRange: 1 },
+    { v1: p1.avgExclamationLength, v2: p2.avgExclamationLength, weight: 1.5, maxRange: 3 },
+    { v1: p1.multiQuestion, v2: p2.multiQuestion, weight: 1.2, maxRange: 1 },
+    { v1: p1.dashFrequency, v2: p2.dashFrequency, weight: 2.0, maxRange: 20 },
+    { v1: p1.parentheticalFrequency, v2: p2.parentheticalFrequency, weight: 2.0, maxRange: 20 },
+    { v1: p1.commasPerMessage, v2: p2.commasPerMessage, weight: 1.5, maxRange: 3 },
+    { v1: p1.endsWithPeriod, v2: p2.endsWithPeriod, weight: 2.0, maxRange: 1 },
+    { v1: p1.endsWithNoPunctuation, v2: p2.endsWithNoPunctuation, weight: 2.0, maxRange: 1 },
+  ];
+
+  let totalDiff = 0;
+  let totalWeight = 0;
+
+  for (const { v1, v2, weight, maxRange } of numericFeatures) {
+    const diff = Math.abs(v1 - v2) / Math.max(maxRange, 0.001);
+    totalDiff += Math.min(diff, 1) * weight;
+    totalWeight += weight;
+  }
+
+  // Boolean features
+  if (p1.oxfordComma === p2.oxfordComma) totalDiff -= 0; // neutral
+  else { totalDiff += 1.0; totalWeight += 1.0; }
+  totalWeight += 1.0; // account for match case
+
+  if (p1.tildeUsage === p2.tildeUsage && (p1.tildeUsage || p2.tildeUsage)) {
+    // Both use or both don't use tildes - distinctive if both use
+    totalWeight += 1.5;
+  } else if (p1.tildeUsage !== p2.tildeUsage) {
+    totalDiff += 1.5;
+    totalWeight += 1.5;
+  }
+
+  return Math.max(0, 1 - (totalDiff / totalWeight));
+}
+
+// ============================================================================
+// ABBREVIATION / CONTRACTION FINGERPRINTING
+// ============================================================================
+
+import type { AbbreviationProfile } from "./types";
+
+// Contraction pairs: [contracted form(s), expanded form(s)]
+const CONTRACTION_PAIRS: [string[], string[]][] = [
+  [["don't", "dont"], ["do not"]],
+  [["can't", "cant"], ["cannot", "can not"]],
+  [["won't", "wont"], ["will not"]],
+  [["wouldn't", "wouldnt"], ["would not"]],
+  [["couldn't", "couldnt"], ["could not"]],
+  [["shouldn't", "shouldnt"], ["should not"]],
+  [["didn't", "didnt"], ["did not"]],
+  [["doesn't", "doesnt"], ["does not"]],
+  [["isn't", "isnt"], ["is not"]],
+  [["aren't", "arent"], ["are not"]],
+  [["wasn't", "wasnt"], ["was not"]],
+  [["weren't", "werent"], ["were not"]],
+  [["hasn't", "hasnt"], ["has not"]],
+  [["haven't", "havent"], ["have not"]],
+  [["hadn't", "hadnt"], ["had not"]],
+  [["it's", "its"], ["it is", "it has"]],
+  [["i'm", "im"], ["i am"]],
+  [["i've", "ive"], ["i have"]],
+  [["i'll", "ill"], ["i will"]],
+  [["i'd", "id"], ["i would", "i had"]],
+  [["you're", "youre"], ["you are"]],
+  [["you've", "youve"], ["you have"]],
+  [["you'll", "youll"], ["you will"]],
+  [["they're", "theyre"], ["they are"]],
+  [["they've", "theyve"], ["they have"]],
+  [["they'll", "theyll"], ["they will"]],
+  [["we're", "were"], ["we are"]],
+  [["we've", "weve"], ["we have"]],
+  [["we'll", "well"], ["we will"]],
+  [["that's", "thats"], ["that is", "that has"]],
+  [["there's", "theres"], ["there is", "there has"]],
+  [["what's", "whats"], ["what is", "what has"]],
+  [["who's", "whos"], ["who is", "who has"]],
+  [["let's", "lets"], ["let us"]],
+];
+
+// Informal abbreviations to track
+const INFORMAL_ABBREVS: [string, string][] = [
+  ["gonna", "going to"],
+  ["wanna", "want to"],
+  ["gotta", "got to"],
+  ["kinda", "kind of"],
+  ["sorta", "sort of"],
+  ["dunno", "don't know"],
+  ["lemme", "let me"],
+  ["gimme", "give me"],
+  ["coulda", "could have"],
+  ["shoulda", "should have"],
+  ["woulda", "would have"],
+  ["oughta", "ought to"],
+  ["hafta", "have to"],
+  ["tryna", "trying to"],
+  ["finna", "fixing to"],
+  ["boutta", "about to"],
+  ["idk", "i don't know"],
+  ["imo", "in my opinion"],
+  ["tbh", "to be honest"],
+  ["ngl", "not gonna lie"],
+  ["smh", "shaking my head"],
+  ["brb", "be right back"],
+  ["afk", "away from keyboard"],
+  ["btw", "by the way"],
+  ["omw", "on my way"],
+  ["np", "no problem"],
+  ["ty", "thank you"],
+  ["thx", "thanks"],
+  ["pls", "please"],
+  ["plz", "please"],
+];
+
+// Ambiguous words to skip in contraction detection (too many false positives)
+const AMBIGUOUS_CONTRACTIONS = new Set(["were", "well", "ill", "its", "id", "lets"]);
+
+export function buildAbbreviationProfile(messages: string[]): AbbreviationProfile {
+  const allText = messages.join(" ").toLowerCase();
+  const words = allText.split(/\s+/);
+  const totalWords = words.length;
+
+  let totalContracted = 0;
+  let totalExpanded = 0;
+  let apostropheCount = 0;
+  let noApostropheCount = 0;
+  const contractions = new Map<string, number>();
+
+  for (const [contractedForms, expandedForms] of CONTRACTION_PAIRS) {
+    let contracted = 0;
+    let expanded = 0;
+
+    for (const form of contractedForms) {
+      if (AMBIGUOUS_CONTRACTIONS.has(form)) continue;
+      const regex = new RegExp(`\\b${form.replace("'", "['\\u2019]?")}\\b`, "gi");
+      const matches = allText.match(regex);
+      if (matches) {
+        contracted += matches.length;
+        for (const m of matches) {
+          if (m.includes("'") || m.includes("\u2019")) apostropheCount++;
+          else noApostropheCount++;
+        }
+      }
+    }
+
+    for (const form of expandedForms) {
+      const regex = new RegExp(`\\b${form}\\b`, "gi");
+      const matches = allText.match(regex);
+      if (matches) expanded += matches.length;
+    }
+
+    const total = contracted + expanded;
+    if (total >= 2) {
+      const key = contractedForms[0].replace("'", "");
+      contractions.set(key, contracted / total);
+      totalContracted += contracted;
+      totalExpanded += expanded;
+    }
+  }
+
+  // Informal abbreviations
+  const informalAbbreviations = new Map<string, number>();
+  for (const [abbrev] of INFORMAL_ABBREVS) {
+    const regex = new RegExp(`\\b${abbrev}\\b`, "gi");
+    const matches = allText.match(regex);
+    if (matches && matches.length >= 1) {
+      informalAbbreviations.set(abbrev, totalWords > 0 ? (matches.length / totalWords) * 1000 : 0);
+    }
+  }
+
+  const totalPairs = totalContracted + totalExpanded;
+  const contractionRate = totalPairs >= 3 ? totalContracted / totalPairs : -1;
+  const totalApostrophe = apostropheCount + noApostropheCount;
+  const apostropheUsage = totalApostrophe >= 3 ? apostropheCount / totalApostrophe : -1;
+
+  return {
+    contractionRate,
+    contractions,
+    informalAbbreviations,
+    apostropheUsage,
+    totalContractionPairs: totalPairs,
+  };
+}
+
+export function compareAbbreviationProfiles(p1: AbbreviationProfile, p2: AbbreviationProfile): number {
+  if (p1.totalContractionPairs < 5 || p2.totalContractionPairs < 5) return 0;
+
+  let totalScore = 0;
+  let totalWeight = 0;
+
+  // Overall contraction rate
+  if (p1.contractionRate >= 0 && p2.contractionRate >= 0) {
+    const diff = Math.abs(p1.contractionRate - p2.contractionRate);
+    totalScore += (1 - diff) * 3.0;
+    totalWeight += 3.0;
+  }
+
+  // Apostrophe usage (dont vs don't)
+  if (p1.apostropheUsage >= 0 && p2.apostropheUsage >= 0) {
+    const diff = Math.abs(p1.apostropheUsage - p2.apostropheUsage);
+    totalScore += (1 - diff) * 2.5;
+    totalWeight += 2.5;
+  }
+
+  // Individual contraction preferences
+  const allKeys = new Set([...p1.contractions.keys(), ...p2.contractions.keys()]);
+  let sharedKeys = 0;
+  let contractionDiff = 0;
+  for (const key of allKeys) {
+    if (p1.contractions.has(key) && p2.contractions.has(key)) {
+      sharedKeys++;
+      contractionDiff += Math.abs(p1.contractions.get(key)! - p2.contractions.get(key)!);
+    }
+  }
+  if (sharedKeys >= 3) {
+    const avgDiff = contractionDiff / sharedKeys;
+    totalScore += (1 - avgDiff) * 2.0;
+    totalWeight += 2.0;
+  }
+
+  // Informal abbreviation overlap
+  const allAbbrevs = new Set([...p1.informalAbbreviations.keys(), ...p2.informalAbbreviations.keys()]);
+  const sharedAbbrevs = [...allAbbrevs].filter(a => p1.informalAbbreviations.has(a) && p2.informalAbbreviations.has(a));
+  if (allAbbrevs.size >= 3) {
+    const jaccard = sharedAbbrevs.length / allAbbrevs.size;
+    totalScore += jaccard * 2.0;
+    totalWeight += 2.0;
+  }
+
+  return totalWeight > 0 ? totalScore / totalWeight : 0;
 }

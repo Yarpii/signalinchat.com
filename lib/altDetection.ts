@@ -7,7 +7,7 @@ import { STOP_WORDS, ALGORITHM_CONFIGS, TYPO_CHECKS, type AlgorithmMode, type Al
 import { cosineSimilarity, distributionSimilarity } from "./utils";
 import { buildRareWordIndex, detectSharedUniqueWords, detectSelfTalk, detectSlips, generateSocialInsights } from "./behavioral";
 import { generateHumanExplanation } from "./playerAnalysis";
-import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams } from "./linguistic";
+import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams, compareSentencePatterns, compareEmoticonProfiles, comparePunctuationFingerprints, compareAbbreviationProfiles } from "./linguistic";
 import type { SocialInsight, SlipPattern } from "./types";
 
 /**
@@ -298,16 +298,41 @@ export function detectAltsAdvanced(
 
       const activitySimilarity = compareActivityPatterns(p1.activityPattern, p2.activityPattern);
       // If activity patterns are DIFFERENT but both have 0 overlap, that's suspicious
-      if (neverOnlineTogether && activitySimilarity < 0.4) {
-        const baseScore = 15;
+      if (neverOnlineTogether && activitySimilarity < 0.3) {
+        const baseScore = 20;
         const weightedScore = Math.round(baseScore * config.temporalWeight);
         scoreBreakdown.temporal += weightedScore;
         reasons.push({
           type: "temporal",
           description: "Complementary schedules",
           weight: weightedScore,
+          evidence: `Very different time-of-day patterns (${Math.round(activitySimilarity * 100)}% similar)`,
+        });
+      } else if (neverOnlineTogether && activitySimilarity < 0.5) {
+        const baseScore = 12;
+        const weightedScore = Math.round(baseScore * config.temporalWeight);
+        scoreBreakdown.temporal += weightedScore;
+        reasons.push({
+          type: "temporal",
+          description: "Different schedules",
+          weight: weightedScore,
           evidence: `Different time-of-day patterns (${Math.round(activitySimilarity * 100)}% similar)`,
         });
+      }
+      // High activity similarity + same writing style = also suspicious (same person, same schedule)
+      if (activitySimilarity > 0.85 && !neverOnlineTogether) {
+        const burstDiff = Math.abs(p1.activityPattern.burstiness - p2.activityPattern.burstiness);
+        if (burstDiff < 0.15) {
+          const baseScore = 8;
+          const weightedScore = Math.round(baseScore * config.temporalWeight);
+          scoreBreakdown.temporal += weightedScore;
+          reasons.push({
+            type: "temporal",
+            description: "Same activity rhythm",
+            weight: weightedScore,
+            evidence: `${Math.round(activitySimilarity * 100)}% schedule match, similar burstiness`,
+          });
+        }
       }
 
       // ========== HANDOFF PATTERN DETECTION ==========
@@ -445,6 +470,41 @@ export function detectAltsAdvanced(
           weight: weightedScore,
           evidence: `${Math.round(msgLenSim * 100)}% message length distribution match`,
         });
+      } else if (msgLenSim > 0.87) {
+        const baseScore = 7;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Similar message length patterns",
+          weight: weightedScore,
+          evidence: `${Math.round(msgLenSim * 100)}% message length distribution match`,
+        });
+      }
+
+      // ========== WORD LENGTH DISTRIBUTION ==========
+
+      const wordLenSim = distributionSimilarity(p1.wordLengthDistribution, p2.wordLengthDistribution);
+      if (wordLenSim > 0.93) {
+        const baseScore = 12;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Same word length preferences",
+          weight: weightedScore,
+          evidence: `${Math.round(wordLenSim * 100)}% word length distribution match`,
+        });
+      } else if (wordLenSim > 0.88) {
+        const baseScore = 6;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar word length preferences",
+          weight: weightedScore,
+          evidence: `${Math.round(wordLenSim * 100)}% word length distribution match`,
+        });
       }
 
       // ========== SHARED UNIQUE WORDS ==========
@@ -541,6 +601,74 @@ export function detectAltsAdvanced(
       // Note: only common typos shared (no distinctive ones) = no score.
       // Common typos like teh, alot, triple-letters are too prevalent in casual English.
 
+      // ========== LETTER SUBSTITUTION PATTERNS ==========
+
+      if (p1.letterSubstitutions.size > 0 && p2.letterSubstitutions.size > 0) {
+        const allSubs = new Set([...p1.letterSubstitutions.keys(), ...p2.letterSubstitutions.keys()]);
+        const sharedSubs: string[] = [];
+        let freqDiffSum = 0;
+        for (const sub of allSubs) {
+          if (p1.letterSubstitutions.has(sub) && p2.letterSubstitutions.has(sub)) {
+            sharedSubs.push(sub);
+            // Compare usage frequency — similar frequency = stronger evidence
+            const f1 = p1.letterSubstitutions.get(sub)!;
+            const f2 = p2.letterSubstitutions.get(sub)!;
+            const maxF = Math.max(f1, f2, 1);
+            freqDiffSum += Math.abs(f1 - f2) / maxF;
+          }
+        }
+        const jaccard = allSubs.size > 0 ? sharedSubs.length / allSubs.size : 0;
+        const avgFreqSim = sharedSubs.length > 0 ? 1 - (freqDiffSum / sharedSubs.length) : 0;
+
+        if (sharedSubs.length >= 3 && jaccard >= 0.5) {
+          // Boost score if frequencies also match
+          const baseScore = avgFreqSim > 0.7 ? 18 : 15;
+          const weightedScore = Math.round(baseScore * config.linguisticWeight);
+          scoreBreakdown.linguistic += weightedScore;
+          reasons.push({
+            type: "linguistic",
+            description: "Same letter substitution habits",
+            weight: weightedScore,
+            evidence: `Both use: ${sharedSubs.slice(0, 4).join(", ")} (${Math.round(jaccard * 100)}% overlap, ${Math.round(avgFreqSim * 100)}% frequency match)`,
+          });
+        } else if (sharedSubs.length >= 2 && jaccard >= 0.4) {
+          const baseScore = 8;
+          const weightedScore = Math.round(baseScore * config.linguisticWeight);
+          scoreBreakdown.linguistic += weightedScore;
+          reasons.push({
+            type: "linguistic",
+            description: "Similar letter substitution habits",
+            weight: weightedScore,
+            evidence: `Both use: ${sharedSubs.join(", ")} (${Math.round(avgFreqSim * 100)}% frequency match)`,
+          });
+        }
+      }
+
+      // ========== ABBREVIATION/CONTRACTION FINGERPRINT ==========
+
+      const abbrevSim = compareAbbreviationProfiles(p1.abbreviationProfile, p2.abbreviationProfile);
+      if (abbrevSim > 0.85) {
+        const baseScore = 20;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Same contraction and abbreviation habits",
+          weight: weightedScore,
+          evidence: `${Math.round(abbrevSim * 100)}% abbreviation profile match`,
+        });
+      } else if (abbrevSim > 0.75) {
+        const baseScore = 10;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar contraction habits",
+          weight: weightedScore,
+          evidence: `${Math.round(abbrevSim * 100)}% abbreviation profile match`,
+        });
+      }
+
       // ========== GREETING/FAREWELL STYLE (NEW) ==========
 
       const sharedGreetings = p1.greetingStyle.filter(g => p2.greetingStyle.includes(g));
@@ -603,6 +731,91 @@ export function detectAltsAdvanced(
         });
       }
 
+      // ========== SENTENCE STRUCTURE ANALYSIS (v4.3) ==========
+
+      const sentenceSim = compareSentencePatterns(p1.sentencePatterns, p2.sentencePatterns);
+      if (sentenceSim > 0.85) {
+        const baseScore = 20;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Nearly identical sentence structure",
+          weight: weightedScore,
+          evidence: `${Math.round(sentenceSim * 100)}% sentence pattern similarity (fragment rate, question tendency, message openers)`,
+        });
+      } else if (sentenceSim > 0.75) {
+        const baseScore = 10;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar sentence construction habits",
+          weight: weightedScore,
+          evidence: `${Math.round(sentenceSim * 100)}% sentence pattern similarity`,
+        });
+      }
+
+      // ========== ENHANCED EMOTICON PROFILING (v4.3) ==========
+
+      const emoticonSim = compareEmoticonProfiles(p1.emoticonProfile, p2.emoticonProfile);
+      if (emoticonSim > 0.80 && (p1.emoticonProfile.emoteFrequency > 5 || p2.emoticonProfile.emoteFrequency > 5)) {
+        const baseScore = 15;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Matching emoticon usage profile",
+          weight: weightedScore,
+          evidence: `${Math.round(emoticonSim * 100)}% emote similarity (same emotes, frequency, placement)`,
+        });
+      } else if (emoticonSim > 0.65 && (p1.emoticonProfile.emoteFrequency > 5 || p2.emoticonProfile.emoteFrequency > 5)) {
+        const baseScore = 8;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Similar emoticon habits",
+          weight: weightedScore,
+          evidence: `${Math.round(emoticonSim * 100)}% emote similarity`,
+        });
+      }
+
+      // ========== PUNCTUATION FINGERPRINTING (v4.3 - NEW ALGORITHM) ==========
+
+      const punctSim = comparePunctuationFingerprints(p1.punctuationFingerprint, p2.punctuationFingerprint);
+      if (punctSim > 0.85) {
+        const baseScore = 25;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Nearly identical punctuation fingerprint",
+          weight: weightedScore,
+          evidence: `${Math.round(punctSim * 100)}% punctuation similarity (ellipsis, exclamation, dash, comma habits)`,
+        });
+      } else if (punctSim > 0.75) {
+        const baseScore = 15;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar punctuation habits",
+          weight: weightedScore,
+          evidence: `${Math.round(punctSim * 100)}% punctuation similarity`,
+        });
+      } else if (punctSim > 0.65) {
+        const baseScore = 8;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Comparable punctuation style",
+          weight: weightedScore,
+          evidence: `${Math.round(punctSim * 100)}% punctuation similarity`,
+        });
+      }
+
       // ========== PHRASE OVERLAP ==========
 
       const phraseOverlap = p1.commonPhrases.filter(p =>
@@ -658,6 +871,31 @@ export function detectAltsAdvanced(
           description: "Same sentence starters",
           weight: weightedScore,
           evidence: sharedStarters.slice(0, 5).join(", "),
+        });
+      }
+
+      // ========== TOPIC FINGERPRINT ==========
+
+      const topicSim = cosineSimilarity(p1.topicFingerprint, p2.topicFingerprint);
+      if (topicSim > 0.85) {
+        const baseScore = 12;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Same topic interests",
+          weight: weightedScore,
+          evidence: `${Math.round(topicSim * 100)}% topic fingerprint overlap`,
+        });
+      } else if (topicSim > 0.75) {
+        const baseScore = 6;
+        const weightedScore = Math.round(baseScore * config.behavioralWeight);
+        scoreBreakdown.behavioral += weightedScore;
+        reasons.push({
+          type: "behavioral",
+          description: "Similar topic interests",
+          weight: weightedScore,
+          evidence: `${Math.round(topicSim * 100)}% topic fingerprint overlap`,
         });
       }
 
