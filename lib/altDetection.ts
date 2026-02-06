@@ -1,14 +1,31 @@
 // ============================================================================
-// CHAT ANALYZER - ALT DETECTION ENGINE (v4.1 - Social Analysis)
+// CHAT ANALYZER - ALT DETECTION ENGINE (v4.4 - Algorithm Improvements)
 // ============================================================================
 
 import type { ChatMessage, AdvancedPlayerStats, AltSuspicion, SimilarityMatrix, ScoreBreakdown, HandoffResult } from "./types";
 import { STOP_WORDS, ALGORITHM_CONFIGS, TYPO_CHECKS, type AlgorithmMode, type AlgorithmConfig } from "./constants";
 import { cosineSimilarity, distributionSimilarity } from "./utils";
-import { buildRareWordIndex, detectSharedUniqueWords, detectSelfTalk, detectSlips, generateSocialInsights } from "./behavioral";
+import { buildRareWordIndex, detectSharedUniqueWords, detectSlips, generateSocialInsights } from "./behavioral";
 import { generateHumanExplanation } from "./playerAnalysis";
 import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams, compareSentencePatterns, compareEmoticonProfiles, comparePunctuationFingerprints, compareAbbreviationProfiles } from "./linguistic";
 import type { SocialInsight, SlipPattern } from "./types";
+
+// v4.4: Common English phrases that should not count as "shared unique phrases"
+// between players. These are used by most English speakers in casual chat.
+const COMMON_PHRASES = new Set([
+  "i dont know", "i don't know", "i think so", "i want to", "i need to",
+  "i have to", "going to be", "going to go", "going to do", "going to get",
+  "do you know", "do you have", "do you want", "do you think",
+  "have to go", "want to go", "need to go", "got to go",
+  "i think that", "i thought it", "i was just", "i was like",
+  "it was like", "that was the", "what do you", "how do you",
+  "you have to", "you need to", "you want to", "you should be",
+  "i can not", "i dont think", "i don't think",
+  "a lot of", "kind of like", "sort of like",
+  "are you going", "what are you", "where are you",
+  "at the same", "on the other", "in the same",
+  "it looks like", "not sure if", "not going to",
+]);
 
 /**
  * Detect handoff pattern between two players (v4.2 - Enhanced)
@@ -233,13 +250,8 @@ export function detectAltsAdvanced(
   // Build rare word index for all players
   const rareWordIndex = buildRareWordIndex(stats);
 
-  // NEW v4.1: Detect self-talk patterns (accounts talking to each other with same style)
-  const selfTalkIndicators = detectSelfTalk(stats, messages);
-  const selfTalkMap = new Map<string, number>();
-  for (const indicator of selfTalkIndicators) {
-    const key = [indicator.player1, indicator.player2].sort().join("|");
-    selfTalkMap.set(key, indicator.suspicionScore);
-  }
+  // v4.4: Self-talk detection moved into main pair loop to avoid duplicate O(n^2) pass.
+  // detectSelfTalk is no longer called here — its logic is inlined below.
 
   // NEW v4.1: Detect slips and social insights
   const slipPatterns = detectSlips(stats, messages);
@@ -546,9 +558,17 @@ export function detectAltsAdvanced(
       }
 
       // ========== CHARACTER N-GRAM SIMILARITY ==========
+      // v4.4: Thresholds scale with corpus size. Same-language English speakers
+      // converge to ~0.94-0.97 similarity as word count grows, so larger corpora
+      // need higher thresholds to avoid false positives.
 
       const ngramSim = cosineSimilarity(p1.charNgrams, p2.charNgrams);
-      if (ngramSim > config.ngramThresholdHigh) {
+      const ngramCorpusSize = Math.min(p1.wordCount, p2.wordCount);
+      const ngramBaselineShift = Math.min(0.015, ngramCorpusSize / 50000); // up to +0.015 at 50k words
+      const ngramThreshHigh = config.ngramThresholdHigh + ngramBaselineShift;
+      const ngramThreshMed = config.ngramThresholdMed + ngramBaselineShift;
+
+      if (ngramSim > ngramThreshHigh) {
         const baseScore = 20;
         const weightedScore = Math.round(baseScore * config.ngramWeight * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -556,9 +576,9 @@ export function detectAltsAdvanced(
           type: "linguistic",
           description: "Nearly identical character patterns",
           weight: weightedScore,
-          evidence: `${Math.round(ngramSim * 100)}% n-gram similarity`,
+          evidence: `${Math.round(ngramSim * 100)}% n-gram similarity (threshold: ${Math.round(ngramThreshHigh * 100)}%)`,
         });
-      } else if (ngramSim > config.ngramThresholdMed) {
+      } else if (ngramSim > ngramThreshMed) {
         const baseScore = 12;
         const weightedScore = Math.round(baseScore * config.ngramWeight * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -566,7 +586,7 @@ export function detectAltsAdvanced(
           type: "linguistic",
           description: "Very high character pattern match",
           weight: weightedScore,
-          evidence: `${Math.round(ngramSim * 100)}% n-gram similarity`,
+          evidence: `${Math.round(ngramSim * 100)}% n-gram similarity (threshold: ${Math.round(ngramThreshMed * 100)}%)`,
         });
       }
 
@@ -710,17 +730,26 @@ export function detectAltsAdvanced(
       }
 
       // ========== MICRO-PATTERNS ==========
+      // v4.4: Compare rates instead of booleans. Two players match on a pattern
+      // when both have a rate above 0.1 AND their rates are within 0.15 of each other.
+
+      const MICRO_MIN_RATE = 0.1;   // Must be present in >10% of messages
+      const MICRO_MAX_DIFF = 0.15;  // Rates must be within 15% of each other
+
+      function microMatch(r1: number, r2: number): boolean {
+        return r1 >= MICRO_MIN_RATE && r2 >= MICRO_MIN_RATE && Math.abs(r1 - r2) < MICRO_MAX_DIFF;
+      }
 
       const microMatches: string[] = [];
-      if (p1.microPatterns.doubleSpaces && p2.microPatterns.doubleSpaces) microMatches.push("double spaces");
-      if (p1.microPatterns.noSpaceAfterPunct && p2.microPatterns.noSpaceAfterPunct) microMatches.push("no space after punct");
-      if (p1.microPatterns.excessiveCaps && p2.microPatterns.excessiveCaps) microMatches.push("EXCESSIVE CAPS");
+      if (microMatch(p1.microPatterns.doubleSpaces, p2.microPatterns.doubleSpaces)) microMatches.push("double spaces");
+      if (microMatch(p1.microPatterns.noSpaceAfterPunct, p2.microPatterns.noSpaceAfterPunct)) microMatches.push("no space after punct");
+      if (microMatch(p1.microPatterns.excessiveCaps, p2.microPatterns.excessiveCaps)) microMatches.push("EXCESSIVE CAPS");
 
       const commonMicroMatches: string[] = [];
-      if (p1.microPatterns.lowercaseI && p2.microPatterns.lowercaseI) commonMicroMatches.push("lowercase i");
-      if (p1.microPatterns.allLowercase && p2.microPatterns.allLowercase) commonMicroMatches.push("all lowercase");
-      if (p1.microPatterns.noCapitalStart && p2.microPatterns.noCapitalStart) commonMicroMatches.push("no capital start");
-      if (p1.microPatterns.numberSubstitution && p2.microPatterns.numberSubstitution) commonMicroMatches.push("number subs");
+      if (microMatch(p1.microPatterns.lowercaseI, p2.microPatterns.lowercaseI)) commonMicroMatches.push("lowercase i");
+      if (microMatch(p1.microPatterns.allLowercase, p2.microPatterns.allLowercase)) commonMicroMatches.push("all lowercase");
+      if (microMatch(p1.microPatterns.noCapitalStart, p2.microPatterns.noCapitalStart)) commonMicroMatches.push("no capital start");
+      if (microMatch(p1.microPatterns.numberSubstitution, p2.microPatterns.numberSubstitution)) commonMicroMatches.push("number subs");
 
       if (microMatches.length >= 2) {
         const baseScore = 18;
@@ -830,9 +859,12 @@ export function detectAltsAdvanced(
       }
 
       // ========== PHRASE OVERLAP ==========
+      // v4.4: Filter out common English phrases to avoid false positives
 
       const phraseOverlap = p1.commonPhrases.filter(p =>
-        p2.commonPhrases.includes(p) && p.split(' ').length >= 3
+        p2.commonPhrases.includes(p) &&
+        p.split(' ').length >= 3 &&
+        !COMMON_PHRASES.has(p.toLowerCase())
       );
       if (phraseOverlap.length >= 3) {
         const baseScore = 25;
@@ -919,22 +951,47 @@ export function detectAltsAdvanced(
       const p1RespondsToP2 = p1.responsePartners.has(p2.name);
       const p2RespondsToP1 = p2.responsePartners.has(p1.name);
 
-      // Check for self-talk pattern (VERY SUSPICIOUS - v4.1)
-      const selfTalkKey = [p1.name, p2.name].sort().join("|");
-      const selfTalkScore = selfTalkMap.get(selfTalkKey) || 0;
+      // v4.4: Inline self-talk detection — reuses ngramSim, functionWordSim,
+      // sharedTypos, and microMatches already computed above in this pair loop.
+      // No separate O(n^2) pass needed.
+      const p1ToP2Responses = p1.responsePartners.get(p2.name) || 0;
+      const p2ToP1Responses = p2.responsePartners.get(p1.name) || 0;
+      const talkToEachOther = p1ToP2Responses >= 3 || p2ToP1Responses >= 3 ||
+        (p1MentionsP2 && p2MentionsP1);
 
-      if (selfTalkScore >= 50) {
-        // They TALK to each other but have SAME writing style = very suspicious
-        const baseScore = Math.min(selfTalkScore, 45);
-        const weightedScore = Math.round(baseScore * config.networkWeight * 1.5);
-        scoreBreakdown.network += weightedScore;
-        reasons.push({
-          type: "network",
-          description: "SELF-TALK DETECTED: Talk to each other but write identically",
-          weight: weightedScore,
-          evidence: `Suspicion score: ${selfTalkScore} (same style while conversing)`,
-        });
-      } else if (!p1MentionsP2 && !p2MentionsP1 && !p1RespondsToP2 && !p2RespondsToP1 &&
+      if (talkToEachOther) {
+        // They interact — check if writing style is suspiciously identical
+        const sameStyle = ngramSim >= 0.92 ||
+          (functionWordSim >= 0.90 && ngramSim >= 0.88) ||
+          (distinctiveSharedTypos.length >= 3) ||
+          (microMatches.length >= 3 && ngramSim >= 0.85);
+
+        if (sameStyle) {
+          let selfTalkScore = 0;
+          const selfTalkEvidence: string[] = [];
+
+          if (ngramSim >= 0.92) { selfTalkScore += 40; selfTalkEvidence.push(`identical char patterns (${Math.round(ngramSim * 100)}%)`); }
+          if (functionWordSim >= 0.90) { selfTalkScore += 30; selfTalkEvidence.push(`same unconscious word usage (${Math.round(functionWordSim * 100)}%)`); }
+          if (distinctiveSharedTypos.length >= 2) { selfTalkScore += 25; selfTalkEvidence.push(`same typos: ${distinctiveSharedTypos.join(", ")}`); }
+          if (microMatches.length >= 2) { selfTalkScore += 15; selfTalkEvidence.push(`${microMatches.length} typing quirks match`); }
+          if (p1ToP2Responses >= 5 && p2ToP1Responses >= 5) { selfTalkScore += 20; selfTalkEvidence.push(`${p1ToP2Responses + p2ToP1Responses} exchanges`); }
+
+          if (selfTalkScore >= 50) {
+            const baseScore = Math.min(selfTalkScore, 45);
+            const weightedScore = Math.round(baseScore * config.networkWeight * 1.5);
+            scoreBreakdown.network += weightedScore;
+            reasons.push({
+              type: "network",
+              description: "SELF-TALK DETECTED: Talk to each other but write identically",
+              weight: weightedScore,
+              evidence: selfTalkEvidence.join(" · "),
+            });
+          }
+        }
+      }
+
+      if (!(talkToEachOther && scoreBreakdown.network > 0) &&
+          !p1MentionsP2 && !p2MentionsP1 && !p1RespondsToP2 && !p2RespondsToP1 &&
           p1.messageCount >= 50 && p2.messageCount >= 50) {
         // Original logic: never interact
         const baseScore = 8;

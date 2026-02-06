@@ -252,13 +252,17 @@ export function generateHumanExplanation(
     parts.push(`- Never talk TO each other despite ${p1.messageCount}+ and ${p2.messageCount}+ messages each`);
   }
 
-  // Micro patterns match
+  // Micro patterns match (v4.4: rate-based comparison)
+  const MICRO_RATE_MIN = 0.1;
+  const MICRO_RATE_DIFF = 0.15;
+  const microRateMatch = (r1: number, r2: number) => r1 >= MICRO_RATE_MIN && r2 >= MICRO_RATE_MIN && Math.abs(r1 - r2) < MICRO_RATE_DIFF;
+
   const microMatches: string[] = [];
-  if (p1.microPatterns.lowercaseI && p2.microPatterns.lowercaseI) microMatches.push("lowercase 'i'");
-  if (p1.microPatterns.allLowercase && p2.microPatterns.allLowercase) microMatches.push("all lowercase");
-  if (p1.microPatterns.excessiveCaps && p2.microPatterns.excessiveCaps) microMatches.push("EXCESSIVE CAPS");
-  if (p1.microPatterns.noSpaceAfterPunct && p2.microPatterns.noSpaceAfterPunct) microMatches.push("no space after punctuation");
-  if (p1.microPatterns.doubleSpaces && p2.microPatterns.doubleSpaces) microMatches.push("double spaces");
+  if (microRateMatch(p1.microPatterns.lowercaseI, p2.microPatterns.lowercaseI)) microMatches.push("lowercase 'i'");
+  if (microRateMatch(p1.microPatterns.allLowercase, p2.microPatterns.allLowercase)) microMatches.push("all lowercase");
+  if (microRateMatch(p1.microPatterns.excessiveCaps, p2.microPatterns.excessiveCaps)) microMatches.push("EXCESSIVE CAPS");
+  if (microRateMatch(p1.microPatterns.noSpaceAfterPunct, p2.microPatterns.noSpaceAfterPunct)) microMatches.push("no space after punctuation");
+  if (microRateMatch(p1.microPatterns.doubleSpaces, p2.microPatterns.doubleSpaces)) microMatches.push("double spaces");
 
   if (microMatches.length >= 2) {
     parts.push(`- Identical writing habits: ${microMatches.join(", ")}`);

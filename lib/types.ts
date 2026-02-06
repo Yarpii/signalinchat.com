@@ -121,14 +121,16 @@ export interface SimilarityMatrix {
 }
 
 // Micro-patterns for forensic fingerprinting
+// v4.4: Rates (0.0-1.0) instead of booleans for finer-grained comparison.
+// Boolean accessors still work: `if (p.lowercaseI)` is truthy when rate > 0.
 export interface MicroPatterns {
-  lowercaseI: boolean;        // writes "i" instead of "I"
-  noCapitalStart: boolean;    // starts sentences without capital
-  allLowercase: boolean;      // all lowercase
-  excessiveCaps: boolean;     // USES LOTS OF CAPS
-  numberSubstitution: boolean; // "2" for "to", "4" for "for"
-  doubleSpaces: boolean;      // two spaces  between words
-  noSpaceAfterPunct: boolean; // no space after.punctuation
+  lowercaseI: number;        // rate: writes "i" instead of "I"
+  noCapitalStart: number;    // rate: starts sentences without capital
+  allLowercase: number;      // rate: all lowercase
+  excessiveCaps: number;     // rate: USES LOTS OF CAPS
+  numberSubstitution: number; // rate: "2" for "to", "4" for "for"
+  doubleSpaces: number;      // rate: two spaces  between words
+  noSpaceAfterPunct: number; // rate: no space after.punctuation
 }
 
 // Emoticon style fingerprint

@@ -225,9 +225,10 @@ export function detectSharedUniqueWords(
   );
 
   const sharedUnique: string[] = [];
-  // Word must be used by at most 2 players (ideally only these two)
-  // to be considered truly unique to this pair.
-  const uniqueThreshold = 2;
+  // v4.4: Threshold scales with player count.
+  // In small chats (<=5), a word used by 2/5 players (40%) is not rare — require exclusive use.
+  // In larger chats, 2 out of many is already very distinctive.
+  const uniqueThreshold = totalPlayers <= 5 ? 1 : 2;
 
   for (const word of p1Words) {
     if (p2Words.has(word)) {
@@ -565,13 +566,18 @@ function countMicroPatternMatches(p1: AdvancedPlayerStats, p2: AdvancedPlayerSta
   const m1 = p1.microPatterns;
   const m2 = p2.microPatterns;
 
+  // v4.4: Compare rates instead of booleans. Match when both > 10% and within 15%.
+  const MIN_RATE = 0.1;
+  const MAX_DIFF = 0.15;
+  function rateMatch(r1: number, r2: number): boolean {
+    return r1 >= MIN_RATE && r2 >= MIN_RATE && Math.abs(r1 - r2) < MAX_DIFF;
+  }
+
   // Only count DISTINCTIVE patterns that indicate individual style.
-  // "lowercaseI", "allLowercase", "noCapitalStart" are extremely common
-  // in casual internet English and should NOT count as fingerprints.
-  if (m1.excessiveCaps && m2.excessiveCaps) matches++;
-  if (m1.numberSubstitution && m2.numberSubstitution) matches++;
-  if (m1.doubleSpaces && m2.doubleSpaces) matches++;
-  if (m1.noSpaceAfterPunct && m2.noSpaceAfterPunct) matches++;
+  if (rateMatch(m1.excessiveCaps, m2.excessiveCaps)) matches++;
+  if (rateMatch(m1.numberSubstitution, m2.numberSubstitution)) matches++;
+  if (rateMatch(m1.doubleSpaces, m2.doubleSpaces)) matches++;
+  if (rateMatch(m1.noSpaceAfterPunct, m2.noSpaceAfterPunct)) matches++;
 
   return matches;
 }

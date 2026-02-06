@@ -210,16 +210,17 @@ export function detectMicroPatterns(messages: string[]): MicroPatterns {
     }
   }
 
-  const threshold = Math.max(3, messages.length * 0.1);
+  // v4.4: Return rates (0.0-1.0) instead of booleans for finer comparison.
+  const total = messages.length || 1;
 
   return {
-    lowercaseI: lowercaseICount >= threshold,
-    noCapitalStart: noCapitalStartCount >= messages.length * 0.5,
-    allLowercase: allLowercaseCount >= messages.length * 0.7,
-    excessiveCaps: excessiveCapsCount >= threshold,
-    numberSubstitution: numberSubCount >= threshold,
-    doubleSpaces: doubleSpaceCount >= threshold,
-    noSpaceAfterPunct: noSpaceAfterPunctCount >= threshold,
+    lowercaseI: Math.round((lowercaseICount / total) * 1000) / 1000,
+    noCapitalStart: Math.round((noCapitalStartCount / total) * 1000) / 1000,
+    allLowercase: Math.round((allLowercaseCount / total) * 1000) / 1000,
+    excessiveCaps: Math.round((excessiveCapsCount / total) * 1000) / 1000,
+    numberSubstitution: Math.round((numberSubCount / total) * 1000) / 1000,
+    doubleSpaces: Math.round((doubleSpaceCount / total) * 1000) / 1000,
+    noSpaceAfterPunct: Math.round((noSpaceAfterPunctCount / total) * 1000) / 1000,
   };
 }
 
