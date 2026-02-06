@@ -17,6 +17,7 @@ import {
   analyzeFunctionWords,
   calculateSimpsonsD,
   calculateBrunetsW,
+  calculateMessageEntropy,
   analyzePunctuationFrequency,
   calculateMessageLengthDistribution,
   analyzeActivityPattern,
@@ -29,7 +30,7 @@ import {
   buildPunctuationFingerprint,
   buildAbbreviationProfile,
 } from "./linguistic";
-import { extractTopicFingerprint, findResponsePartners, findMentionedPlayers, extractCommonWords, extractCommonPhrases, extractGameTopics } from "./behavioral";
+import { extractTopicFingerprint, findResponsePartners, findMentionedPlayers, extractCommonWords, extractCommonPhrases, extractGameTopics, buildResponseLatencyDistribution } from "./behavioral";
 import type { GameProfile } from "./gameProfiles";
 
 /**
@@ -136,6 +137,7 @@ export function analyzePlayerAdvanced(
     yulesK: calculateYulesK(cleanWords),
     simpsonsD: calculateSimpsonsD(cleanWords), // NEW
     brunetsW: calculateBrunetsW(cleanWords), // NEW
+    messageEntropy: calculateMessageEntropy(texts), // v4.4
     avgWordLength: cleanWords.length > 0
       ? Math.round(cleanWords.reduce((a, b) => a + b.length, 0) / cleanWords.length * 10) / 10
       : 0,
@@ -154,6 +156,8 @@ export function analyzePlayerAdvanced(
     topicFingerprint: extractTopicFingerprint(texts),
     gameTopics: extractGameTopics(texts, gameProfile?.gameTerms || []),
     wurmTopics: extractGameTopics(texts, gameProfile?.gameTerms || []),
+
+    responseLatencyDistribution: buildResponseLatencyDistribution(name, messages), // v4.4
 
     allMessages: texts,
     messageTimes,

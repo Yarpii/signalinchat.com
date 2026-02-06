@@ -45,6 +45,7 @@ export interface AdvancedPlayerStats {
   yulesK: number; // Yule's characteristic K
   simpsonsD: number; // NEW: Simpson's Diversity Index
   brunetsW: number; // NEW: Brunet's W statistic
+  messageEntropy: number; // v4.4: Shannon entropy (bits/char)
   avgWordLength: number;
   wordLengthDistribution: number[]; // Distribution of word lengths 1-15+
   messageLengthDistribution: number[]; // NEW: Distribution of message lengths
@@ -62,6 +63,9 @@ export interface AdvancedPlayerStats {
   topicFingerprint: Map<string, number>; // Topic word frequencies
   wurmTopics: Map<string, number>; // Game-specific topic usage (kept for backwards compat)
   gameTopics: Map<string, number>; // Game-specific topic usage
+
+  // v4.4: Response latency fingerprint
+  responseLatencyDistribution: number[]; // Normalized histogram of response times
 
   // Raw data for comparison
   allMessages: string[];

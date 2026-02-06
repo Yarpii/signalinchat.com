@@ -353,6 +353,43 @@ export function detectAltsAdvanced(
         }
       }
 
+      // ========== CROSS-DAY PATTERN ANALYSIS (v4.4) ==========
+      // Check if players appear on complementary days (A on Mon/Wed, B on Tue/Thu)
+
+      if (totalDays >= 3) {
+        const p1Days = new Set(p1.activeDayMinutes.keys());
+        const p2Days = new Set(p2.activeDayMinutes.keys());
+        const sharedDays = new Set([...p1Days].filter(d => p2Days.has(d)));
+        const totalUniqueDays = new Set([...p1Days, ...p2Days]).size;
+
+        if (p1Days.size >= 2 && p2Days.size >= 2 && totalUniqueDays >= 3) {
+          const dayOverlapRatio = sharedDays.size / totalUniqueDays;
+
+          // Complementary: active on different days with little overlap
+          if (dayOverlapRatio === 0 && neverOnlineTogether) {
+            const baseScore = 18;
+            const weightedScore = Math.round(baseScore * config.temporalWeight);
+            scoreBreakdown.temporal += weightedScore;
+            reasons.push({
+              type: "temporal",
+              description: "Complementary daily schedules",
+              weight: weightedScore,
+              evidence: `${p1.name} active ${p1Days.size} days, ${p2.name} active ${p2Days.size} days, zero day overlap`,
+            });
+          } else if (dayOverlapRatio < 0.2 && overlap.size < minActivity * 0.05) {
+            const baseScore = 10;
+            const weightedScore = Math.round(baseScore * config.temporalWeight);
+            scoreBreakdown.temporal += weightedScore;
+            reasons.push({
+              type: "temporal",
+              description: "Mostly different active days",
+              weight: weightedScore,
+              evidence: `Only ${sharedDays.size} of ${totalUniqueDays} days shared (${Math.round(dayOverlapRatio * 100)}% overlap)`,
+            });
+          }
+        }
+      }
+
       // ========== HANDOFF PATTERN DETECTION ==========
 
       const handoffData = detectHandoffPattern(p1, p2, messages);
@@ -454,6 +491,33 @@ export function detectAltsAdvanced(
           description: "Similar vocabulary complexity",
           weight: weightedScore,
           evidence: `Simpson's D: ${simpsonsDiff.toFixed(3)} diff, Yule's K: ${yulesKDiff.toFixed(0)} diff`,
+        });
+      }
+
+      // ========== MESSAGE ENTROPY (v4.4) ==========
+      // Shannon entropy measures information density per character.
+      // Same-author accounts tend to have very similar entropy values.
+
+      const entropyDiff = Math.abs(p1.messageEntropy - p2.messageEntropy);
+      if (entropyDiff < 0.1 && p1.messageEntropy > 0 && p2.messageEntropy > 0) {
+        const baseScore = 10;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Matching message entropy",
+          weight: weightedScore,
+          evidence: `${p1.name}: ${p1.messageEntropy.toFixed(2)} bits/char, ${p2.name}: ${p2.messageEntropy.toFixed(2)} bits/char (diff: ${entropyDiff.toFixed(3)})`,
+        });
+      } else if (entropyDiff < 0.2 && p1.messageEntropy > 0 && p2.messageEntropy > 0) {
+        const baseScore = 5;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar message entropy",
+          weight: weightedScore,
+          evidence: `${p1.name}: ${p1.messageEntropy.toFixed(2)} bits/char, ${p2.name}: ${p2.messageEntropy.toFixed(2)} bits/char`,
         });
       }
 
@@ -942,6 +1006,38 @@ export function detectAltsAdvanced(
           weight: weightedScore,
           evidence: `${Math.round(topicSim * 100)}% topic fingerprint overlap`,
         });
+      }
+
+      // ========== RESPONSE LATENCY FINGERPRINT (v4.4) ==========
+      // How quickly someone responds is a stable personal trait.
+      // Only compare when both players have enough response data.
+
+      const p1HasLatency = p1.responseLatencyDistribution.some(v => v > 0);
+      const p2HasLatency = p2.responseLatencyDistribution.some(v => v > 0);
+
+      if (p1HasLatency && p2HasLatency) {
+        const latencySim = distributionSimilarity(p1.responseLatencyDistribution, p2.responseLatencyDistribution);
+        if (latencySim > 0.90) {
+          const baseScore = 15;
+          const weightedScore = Math.round(baseScore * config.behavioralWeight);
+          scoreBreakdown.behavioral += weightedScore;
+          reasons.push({
+            type: "behavioral",
+            description: "Same response timing profile",
+            weight: weightedScore,
+            evidence: `${Math.round(latencySim * 100)}% response latency distribution match`,
+          });
+        } else if (latencySim > 0.80) {
+          const baseScore = 8;
+          const weightedScore = Math.round(baseScore * config.behavioralWeight);
+          scoreBreakdown.behavioral += weightedScore;
+          reasons.push({
+            type: "behavioral",
+            description: "Similar response timing",
+            weight: weightedScore,
+            evidence: `${Math.round(latencySim * 100)}% response latency distribution match`,
+          });
+        }
       }
 
       // ========== NETWORK ANALYSIS ==========

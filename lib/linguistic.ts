@@ -355,6 +355,34 @@ export function calculateSimpsonsD(words: string[]): number {
 }
 
 /**
+ * v4.4: Calculate Shannon entropy of message text.
+ * Measures information density / predictability. Terse "ok lol" chatters
+ * have low entropy; verbose descriptive chatters have high entropy.
+ * More robust than word count alone as a personal communication fingerprint.
+ * Returns bits per character (typically 3.5-4.5 for English).
+ */
+export function calculateMessageEntropy(messages: string[]): number {
+  if (messages.length === 0) return 0;
+
+  const allText = messages.join(" ").toLowerCase();
+  if (allText.length === 0) return 0;
+
+  const charFreq = new Map<string, number>();
+  for (const c of allText) {
+    charFreq.set(c, (charFreq.get(c) || 0) + 1);
+  }
+
+  let entropy = 0;
+  const len = allText.length;
+  for (const count of charFreq.values()) {
+    const p = count / len;
+    if (p > 0) entropy -= p * Math.log2(p);
+  }
+
+  return Math.round(entropy * 1000) / 1000;
+}
+
+/**
  * Calculate Brunet's W statistic
  * More stable measure of vocabulary richness
  * W = N^(V^(-0.172)) where N = total words, V = unique words

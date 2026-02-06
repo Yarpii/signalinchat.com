@@ -59,6 +59,45 @@ export function findResponsePartners(
 }
 
 /**
+ * v4.4: Build response latency distribution for a player.
+ * Measures how quickly someone responds after another player's message.
+ * Buckets: 0-2s, 2-5s, 5-10s, 10-20s, 20-30s, 30-60s, 60-120s, 120s+
+ * The shape of this distribution is a personal fingerprint.
+ */
+export function buildResponseLatencyDistribution(
+  playerName: string,
+  messages: ChatMessage[]
+): number[] {
+  const buckets = [2, 5, 10, 20, 30, 60, 120, Infinity];
+  const dist = new Array(buckets.length).fill(0);
+  let totalResponses = 0;
+
+  for (let i = 1; i < messages.length; i++) {
+    if (messages[i].player !== playerName) continue;
+
+    // Find the most recent message from a different player
+    for (let j = i - 1; j >= 0 && j >= i - 5; j--) {
+      if (messages[j].player === playerName) continue;
+      const delay = messages[i].absoluteTime - messages[j].absoluteTime;
+      if (delay <= 0 || delay > 120) break; // Only care about responses within 2 min
+
+      for (let b = 0; b < buckets.length; b++) {
+        if (delay <= buckets[b]) {
+          dist[b]++;
+          totalResponses++;
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  // Normalize
+  if (totalResponses === 0) return dist;
+  return dist.map(c => Math.round((c / totalResponses) * 1000) / 1000);
+}
+
+/**
  * Find mentioned players
  */
 export function findMentionedPlayers(messages: string[], allPlayers: string[]): Set<string> {
