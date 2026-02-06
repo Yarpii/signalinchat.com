@@ -15,20 +15,26 @@ export function getPlayerColor(name: string): string {
 }
 
 /**
- * Calculate cosine similarity between two frequency maps
+ * Calculate cosine similarity between two frequency maps.
+ * Optimized: iterates each map once instead of allocating a key union Set.
+ * Dot product only needs shared keys; norms are computed per-map.
  */
 export function cosineSimilarity(a: Map<string, number>, b: Map<string, number>): number {
   let dotProduct = 0;
   let normA = 0;
   let normB = 0;
 
-  const allKeys = new Set([...a.keys(), ...b.keys()]);
-
-  for (const key of allKeys) {
-    const valA = a.get(key) || 0;
-    const valB = b.get(key) || 0;
-    dotProduct += valA * valB;
+  // Compute normA and dot product in one pass over map a
+  for (const [key, valA] of a) {
     normA += valA * valA;
+    const valB = b.get(key);
+    if (valB !== undefined) {
+      dotProduct += valA * valB;
+    }
+  }
+
+  // Compute normB in one pass over map b
+  for (const valB of b.values()) {
     normB += valB * valB;
   }
 
@@ -37,15 +43,25 @@ export function cosineSimilarity(a: Map<string, number>, b: Map<string, number>)
 }
 
 /**
- * Calculate distribution similarity between two arrays
+ * Calculate distribution similarity between two arrays.
+ * v4.4: Uses cosine similarity instead of L1 distance.
+ * L1 overstates similarity when both distributions have many zero bins
+ * (e.g. two short-message players match on absence of long messages).
+ * Cosine similarity only rewards shared positive structure.
  */
 export function distributionSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
 
-  let sumDiff = 0;
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+
   for (let i = 0; i < a.length; i++) {
-    sumDiff += Math.abs(a[i] - b[i]);
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
   }
 
-  return 1 - (sumDiff / 2); // Normalized
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }

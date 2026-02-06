@@ -189,6 +189,12 @@ export function detectHandoffPattern(
     score += 5;
   }
 
+  // v4.4: Perfectly balanced bidirectional handoffs are also suspicious —
+  // symmetric account switching (A->B then B->A) with high count
+  if (handoffCount >= 6 && directionality <= 0.2) {
+    score += 7;
+  }
+
   // Cap at 55 (handoff alone shouldn't dominate)
   score = Math.min(score, 55);
 
@@ -410,7 +416,14 @@ export function detectAltsAdvanced(
       // All three metrics should be similar for same author.
       // Note: casual English chat has a fairly narrow range for these metrics,
       // so thresholds must be tight to avoid flagging normal same-language speakers.
-      if (simpsonsDiff < 0.005 && brunetsWDiff < 0.5 && yulesKDiff < 10) {
+      // v4.4: Thresholds scale with sample size — more data = tighter thresholds.
+      const vocabMinMsgs = Math.min(p1.messageCount, p2.messageCount);
+      const vocabSampleConf = Math.min(1, (vocabMinMsgs - 20) / 80); // 0 at 20 msgs, 1 at 100+
+      const simpsonThreshHigh = 0.005 + 0.01 * (1 - vocabSampleConf);   // 0.015 at low data, 0.005 at high
+      const brunetsThreshHigh = 0.5 + 1.0 * (1 - vocabSampleConf);      // 1.5 at low data, 0.5 at high
+      const yulesKThreshHigh = 10 + 15 * (1 - vocabSampleConf);          // 25 at low data, 10 at high
+
+      if (simpsonsDiff < simpsonThreshHigh && brunetsWDiff < brunetsThreshHigh && yulesKDiff < yulesKThreshHigh) {
         const baseScore = 20;
         const weightedScore = Math.round(baseScore * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -420,7 +433,7 @@ export function detectAltsAdvanced(
           weight: weightedScore,
           evidence: `Simpson's D: ${simpsonsDiff.toFixed(3)} diff, Brunet's W: ${brunetsWDiff.toFixed(1)} diff, Yule's K: ${yulesKDiff.toFixed(0)} diff`,
         });
-      } else if (simpsonsDiff < 0.01 && brunetsWDiff < 1 && yulesKDiff < 20) {
+      } else if (simpsonsDiff < simpsonThreshHigh * 2 && brunetsWDiff < brunetsThreshHigh * 2 && yulesKDiff < yulesKThreshHigh * 2) {
         const baseScore = 10;
         const weightedScore = Math.round(baseScore * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -994,6 +1007,14 @@ export function detectAltsAdvanced(
         });
       }
 
+      // ========== DATA CONFIDENCE SCALING (v4.4) ==========
+      // Players near the minimum message threshold produce noisier signals.
+      // Scale total score down when data is scarce to reduce false positives.
+      const minMessages = Math.min(p1.messageCount, p2.messageCount);
+      const dataConfidence = Math.min(1, (minMessages - config.minMessages) / 80);
+      // At minMessages: score reduced by 40%. At minMessages+80: full score.
+      totalScore = Math.round(totalScore * (0.6 + 0.4 * dataConfidence));
+
       // Store in matrix
       scores[i][j] = totalScore;
       scores[j][i] = totalScore;
@@ -1005,9 +1026,12 @@ export function detectAltsAdvanced(
 
       // Use config thresholds for reporting
       if (totalScore >= config.minScoreToReport && strongReasons.length >= config.minStrongReasons) {
-        // Configurable confidence formula
+        // Sigmoid confidence formula (v4.4) — S-curve gives diminishing returns at extremes
+        // Center point scales with config: higher confidenceBase = need more evidence
+        const sigmoidCenter = config.confidenceBase * 10; // e.g. balanced: 120, strict: 150
+        const sigmoidSteepness = config.confidenceMultiplier * 0.075; // e.g. balanced: 0.03
         const confidence = Math.min(
-          Math.round(totalScore * config.confidenceMultiplier + config.confidenceBase),
+          Math.round(95 / (1 + Math.exp(-sigmoidSteepness * (totalScore - sigmoidCenter)))),
           95
         );
 
