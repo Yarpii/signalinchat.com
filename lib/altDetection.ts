@@ -76,40 +76,37 @@ export function detectHandoffPattern(
 
   if (p1Sessions.length < 2 && p2Sessions.length < 2) return empty;
 
-  // Detect handoffs in both directions with delay tracking
+  // v4.4: Two-pointer handoff detection — O(s1 + s2) instead of O(s1 * s2).
+  // Sessions are already sorted by start time from findSessions().
   let p1ToP2 = 0;
   let p2ToP1 = 0;
   const handoffDelays: number[] = [];
 
-  // P1 ends → P2 starts
-  for (const p1Sess of p1Sessions) {
-    let bestDelay = Infinity;
-    for (const p2Sess of p2Sessions) {
-      const diff = p2Sess.start - p1Sess.end;
-      if (diff > 0 && diff <= HANDOFF_WINDOW && diff < bestDelay) {
-        bestDelay = diff;
+  // Detect handoffs using a scan: for each session end, find the earliest
+  // start of the other player's session that falls within the handoff window.
+  function detectDirectionalHandoffs(
+    endingSessions: Session[],
+    startingSessions: Session[]
+  ): number {
+    let count = 0;
+    let j = 0;
+    for (const sess of endingSessions) {
+      // Advance j to the first session that starts after sess.end
+      while (j < startingSessions.length && startingSessions[j].start <= sess.end) j++;
+      // Check if that session starts within the handoff window
+      if (j < startingSessions.length) {
+        const diff = startingSessions[j].start - sess.end;
+        if (diff > 0 && diff <= HANDOFF_WINDOW) {
+          count++;
+          handoffDelays.push(diff);
+        }
       }
     }
-    if (bestDelay < Infinity) {
-      p1ToP2++;
-      handoffDelays.push(bestDelay);
-    }
+    return count;
   }
 
-  // P2 ends → P1 starts
-  for (const p2Sess of p2Sessions) {
-    let bestDelay = Infinity;
-    for (const p1Sess of p1Sessions) {
-      const diff = p1Sess.start - p2Sess.end;
-      if (diff > 0 && diff <= HANDOFF_WINDOW && diff < bestDelay) {
-        bestDelay = diff;
-      }
-    }
-    if (bestDelay < Infinity) {
-      p2ToP1++;
-      handoffDelays.push(bestDelay);
-    }
-  }
+  p1ToP2 = detectDirectionalHandoffs(p1Sessions, p2Sessions);
+  p2ToP1 = detectDirectionalHandoffs(p2Sessions, p1Sessions);
 
   const handoffCount = p1ToP2 + p2ToP1;
   const totalTransitions = p1Sessions.length + p2Sessions.length;

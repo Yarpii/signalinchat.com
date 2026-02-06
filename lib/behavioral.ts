@@ -488,13 +488,35 @@ export function detectSlips(
 
     const playerMessages = messages.filter(m => m.player === player.name);
 
-    // Split messages into time windows and analyze style consistency
-    const earlyMsgs = playerMessages.slice(0, Math.floor(playerMessages.length / 3));
-    const midMsgs = playerMessages.slice(
-      Math.floor(playerMessages.length / 3),
-      Math.floor(2 * playerMessages.length / 3)
-    );
-    const lateMsgs = playerMessages.slice(Math.floor(2 * playerMessages.length / 3));
+    // v4.4: Split by day (using dayIndex) for multi-day logs, or by thirds
+    // for single-day logs. Day-based splitting catches style shifts when
+    // different users log in on different days on the same account.
+    const dayGroups = new Map<number, ChatMessage[]>();
+    for (const msg of playerMessages) {
+      if (!dayGroups.has(msg.dayIndex)) dayGroups.set(msg.dayIndex, []);
+      dayGroups.get(msg.dayIndex)!.push(msg);
+    }
+
+    let earlyMsgs: ChatMessage[];
+    let midMsgs: ChatMessage[];
+    let lateMsgs: ChatMessage[];
+
+    if (dayGroups.size >= 3) {
+      // Multi-day: compare across days
+      const sortedDays = [...dayGroups.entries()].sort((a, b) => a[0] - b[0]);
+      const thirdLen = Math.ceil(sortedDays.length / 3);
+      earlyMsgs = sortedDays.slice(0, thirdLen).flatMap(([, msgs]) => msgs);
+      midMsgs = sortedDays.slice(thirdLen, thirdLen * 2).flatMap(([, msgs]) => msgs);
+      lateMsgs = sortedDays.slice(thirdLen * 2).flatMap(([, msgs]) => msgs);
+    } else {
+      // Single/few day(s): fall back to index-based thirds
+      earlyMsgs = playerMessages.slice(0, Math.floor(playerMessages.length / 3));
+      midMsgs = playerMessages.slice(
+        Math.floor(playerMessages.length / 3),
+        Math.floor(2 * playerMessages.length / 3)
+      );
+      lateMsgs = playerMessages.slice(Math.floor(2 * playerMessages.length / 3));
+    }
 
     // Check for capitalization inconsistency
     const earlyLowercase = countLowercaseRatio(earlyMsgs.map(m => m.message));

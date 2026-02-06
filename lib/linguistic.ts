@@ -506,37 +506,57 @@ export function analyzeActivityPattern(
 }
 
 /**
- * Detect greeting style
+ * Detect greeting style.
+ * v4.4: Single pass over messages instead of O(greetings * messages) regex scans.
  */
 export function detectGreetingStyle(messages: string[]): string[] {
-  const found: string[] = [];
+  const greetingSet = new Set(GREETINGS);
+  const counts = new Map<string, number>();
 
-  for (const greeting of GREETINGS) {
-    const pattern = new RegExp(`^${greeting}\\b|\\b${greeting}$|^${greeting}$`, "i");
-    const count = messages.filter(m => pattern.test(m.trim())).length;
-    if (count >= 2) {
-      found.push(greeting);
+  for (const msg of messages) {
+    const trimmed = msg.trim().toLowerCase();
+    const words = trimmed.split(/\s+/);
+    const first = words[0]?.replace(/[^a-z]/g, "");
+    const last = words[words.length - 1]?.replace(/[^a-z]/g, "");
+
+    if (first && greetingSet.has(first)) counts.set(first, (counts.get(first) || 0) + 1);
+    if (last && last !== first && greetingSet.has(last)) counts.set(last, (counts.get(last) || 0) + 1);
+    // Also check if entire message is a greeting
+    if (words.length === 1 && first && greetingSet.has(first)) {
+      counts.set(first, (counts.get(first) || 0)); // Already counted above
     }
   }
 
-  return found.slice(0, 5);
+  return [...counts.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([word]) => word);
 }
 
 /**
- * Detect farewell style
+ * Detect farewell style.
+ * v4.4: Single pass over messages instead of O(farewells * messages) regex scans.
  */
 export function detectFarewellStyle(messages: string[]): string[] {
-  const found: string[] = [];
+  const farewellSet = new Set(FAREWELLS);
+  const counts = new Map<string, number>();
 
-  for (const farewell of FAREWELLS) {
-    const pattern = new RegExp(`^${farewell}\\b|\\b${farewell}$|^${farewell}$`, "i");
-    const count = messages.filter(m => pattern.test(m.trim())).length;
-    if (count >= 2) {
-      found.push(farewell);
-    }
+  for (const msg of messages) {
+    const trimmed = msg.trim().toLowerCase();
+    const words = trimmed.split(/\s+/);
+    const first = words[0]?.replace(/[^a-z]/g, "");
+    const last = words[words.length - 1]?.replace(/[^a-z]/g, "");
+
+    if (first && farewellSet.has(first)) counts.set(first, (counts.get(first) || 0) + 1);
+    if (last && last !== first && farewellSet.has(last)) counts.set(last, (counts.get(last) || 0) + 1);
   }
 
-  return found.slice(0, 5);
+  return [...counts.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([word]) => word);
 }
 
 /**
@@ -597,16 +617,17 @@ export function compareFunctionWordProfiles(p1: FunctionWordProfile, p2: Functio
 
   // Convert to similarity (1 = identical, 0 = very different)
   const avgDiff = totalDiff / totalWeight;
-  // Apply baseline penalty: typical same-language speakers already score ~0.75-0.85
-  // similarity on function words. Rescale so that baseline similarity maps to ~0.5
-  // and only truly distinctive matches score high.
   const rawSimilarity = Math.max(0, 1 - avgDiff);
-  const BASELINE = 0.82; // Expected similarity between same-dialect (e.g. American) English speakers
-  if (rawSimilarity <= BASELINE) {
-    return rawSimilarity * 0.5 / BASELINE; // Map 0..baseline -> 0..0.5
-  }
-  // Map baseline..1.0 -> 0.5..1.0
-  return 0.5 + (rawSimilarity - BASELINE) * 0.5 / (1.0 - BASELINE);
+
+  // v4.4: Smooth logistic rescaling instead of piecewise linear.
+  // The old piecewise function had a derivative discontinuity at the baseline (0.82),
+  // causing small changes around the threshold to get inconsistent amplification.
+  // The sigmoid provides a smooth transition: below baseline -> low score,
+  // above baseline -> high score, with gradual transition around the center.
+  const BASELINE = 0.82; // Expected similarity between same-dialect English speakers
+  const STEEPNESS = 16;  // Controls how sharp the transition is around baseline
+  const z = (rawSimilarity - BASELINE) * STEEPNESS;
+  return 1 / (1 + Math.exp(-z));
 }
 
 /**
