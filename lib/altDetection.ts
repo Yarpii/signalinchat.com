@@ -1,14 +1,31 @@
 // ============================================================================
-// CHAT ANALYZER - ALT DETECTION ENGINE (v4.1 - Social Analysis)
+// CHAT ANALYZER - ALT DETECTION ENGINE (v4.4 - Algorithm Improvements)
 // ============================================================================
 
 import type { ChatMessage, AdvancedPlayerStats, AltSuspicion, SimilarityMatrix, ScoreBreakdown, HandoffResult } from "./types";
 import { STOP_WORDS, ALGORITHM_CONFIGS, TYPO_CHECKS, type AlgorithmMode, type AlgorithmConfig } from "./constants";
 import { cosineSimilarity, distributionSimilarity } from "./utils";
-import { buildRareWordIndex, detectSharedUniqueWords, detectSelfTalk, detectSlips, generateSocialInsights } from "./behavioral";
+import { buildRareWordIndex, detectSharedUniqueWords, detectSlips, generateSocialInsights } from "./behavioral";
 import { generateHumanExplanation } from "./playerAnalysis";
 import { compareFunctionWordProfiles, compareActivityPatterns, compareWordBigrams, compareSentencePatterns, compareEmoticonProfiles, comparePunctuationFingerprints, compareAbbreviationProfiles } from "./linguistic";
 import type { SocialInsight, SlipPattern } from "./types";
+
+// v4.4: Common English phrases that should not count as "shared unique phrases"
+// between players. These are used by most English speakers in casual chat.
+const COMMON_PHRASES = new Set([
+  "i dont know", "i don't know", "i think so", "i want to", "i need to",
+  "i have to", "going to be", "going to go", "going to do", "going to get",
+  "do you know", "do you have", "do you want", "do you think",
+  "have to go", "want to go", "need to go", "got to go",
+  "i think that", "i thought it", "i was just", "i was like",
+  "it was like", "that was the", "what do you", "how do you",
+  "you have to", "you need to", "you want to", "you should be",
+  "i can not", "i dont think", "i don't think",
+  "a lot of", "kind of like", "sort of like",
+  "are you going", "what are you", "where are you",
+  "at the same", "on the other", "in the same",
+  "it looks like", "not sure if", "not going to",
+]);
 
 /**
  * Detect handoff pattern between two players (v4.2 - Enhanced)
@@ -59,40 +76,37 @@ export function detectHandoffPattern(
 
   if (p1Sessions.length < 2 && p2Sessions.length < 2) return empty;
 
-  // Detect handoffs in both directions with delay tracking
+  // v4.4: Two-pointer handoff detection — O(s1 + s2) instead of O(s1 * s2).
+  // Sessions are already sorted by start time from findSessions().
   let p1ToP2 = 0;
   let p2ToP1 = 0;
   const handoffDelays: number[] = [];
 
-  // P1 ends → P2 starts
-  for (const p1Sess of p1Sessions) {
-    let bestDelay = Infinity;
-    for (const p2Sess of p2Sessions) {
-      const diff = p2Sess.start - p1Sess.end;
-      if (diff > 0 && diff <= HANDOFF_WINDOW && diff < bestDelay) {
-        bestDelay = diff;
+  // Detect handoffs using a scan: for each session end, find the earliest
+  // start of the other player's session that falls within the handoff window.
+  function detectDirectionalHandoffs(
+    endingSessions: Session[],
+    startingSessions: Session[]
+  ): number {
+    let count = 0;
+    let j = 0;
+    for (const sess of endingSessions) {
+      // Advance j to the first session that starts after sess.end
+      while (j < startingSessions.length && startingSessions[j].start <= sess.end) j++;
+      // Check if that session starts within the handoff window
+      if (j < startingSessions.length) {
+        const diff = startingSessions[j].start - sess.end;
+        if (diff > 0 && diff <= HANDOFF_WINDOW) {
+          count++;
+          handoffDelays.push(diff);
+        }
       }
     }
-    if (bestDelay < Infinity) {
-      p1ToP2++;
-      handoffDelays.push(bestDelay);
-    }
+    return count;
   }
 
-  // P2 ends → P1 starts
-  for (const p2Sess of p2Sessions) {
-    let bestDelay = Infinity;
-    for (const p1Sess of p1Sessions) {
-      const diff = p1Sess.start - p2Sess.end;
-      if (diff > 0 && diff <= HANDOFF_WINDOW && diff < bestDelay) {
-        bestDelay = diff;
-      }
-    }
-    if (bestDelay < Infinity) {
-      p2ToP1++;
-      handoffDelays.push(bestDelay);
-    }
-  }
+  p1ToP2 = detectDirectionalHandoffs(p1Sessions, p2Sessions);
+  p2ToP1 = detectDirectionalHandoffs(p2Sessions, p1Sessions);
 
   const handoffCount = p1ToP2 + p2ToP1;
   const totalTransitions = p1Sessions.length + p2Sessions.length;
@@ -189,6 +203,12 @@ export function detectHandoffPattern(
     score += 5;
   }
 
+  // v4.4: Perfectly balanced bidirectional handoffs are also suspicious —
+  // symmetric account switching (A->B then B->A) with high count
+  if (handoffCount >= 6 && directionality <= 0.2) {
+    score += 7;
+  }
+
   // Cap at 55 (handoff alone shouldn't dominate)
   score = Math.min(score, 55);
 
@@ -227,13 +247,8 @@ export function detectAltsAdvanced(
   // Build rare word index for all players
   const rareWordIndex = buildRareWordIndex(stats);
 
-  // NEW v4.1: Detect self-talk patterns (accounts talking to each other with same style)
-  const selfTalkIndicators = detectSelfTalk(stats, messages);
-  const selfTalkMap = new Map<string, number>();
-  for (const indicator of selfTalkIndicators) {
-    const key = [indicator.player1, indicator.player2].sort().join("|");
-    selfTalkMap.set(key, indicator.suspicionScore);
-  }
+  // v4.4: Self-talk detection moved into main pair loop to avoid duplicate O(n^2) pass.
+  // detectSelfTalk is no longer called here — its logic is inlined below.
 
   // NEW v4.1: Detect slips and social insights
   const slipPatterns = detectSlips(stats, messages);
@@ -335,6 +350,43 @@ export function detectAltsAdvanced(
         }
       }
 
+      // ========== CROSS-DAY PATTERN ANALYSIS (v4.4) ==========
+      // Check if players appear on complementary days (A on Mon/Wed, B on Tue/Thu)
+
+      if (totalDays >= 3) {
+        const p1Days = new Set(p1.activeDayMinutes.keys());
+        const p2Days = new Set(p2.activeDayMinutes.keys());
+        const sharedDays = new Set([...p1Days].filter(d => p2Days.has(d)));
+        const totalUniqueDays = new Set([...p1Days, ...p2Days]).size;
+
+        if (p1Days.size >= 2 && p2Days.size >= 2 && totalUniqueDays >= 3) {
+          const dayOverlapRatio = sharedDays.size / totalUniqueDays;
+
+          // Complementary: active on different days with little overlap
+          if (dayOverlapRatio === 0 && neverOnlineTogether) {
+            const baseScore = 18;
+            const weightedScore = Math.round(baseScore * config.temporalWeight);
+            scoreBreakdown.temporal += weightedScore;
+            reasons.push({
+              type: "temporal",
+              description: "Complementary daily schedules",
+              weight: weightedScore,
+              evidence: `${p1.name} active ${p1Days.size} days, ${p2.name} active ${p2Days.size} days, zero day overlap`,
+            });
+          } else if (dayOverlapRatio < 0.2 && overlap.size < minActivity * 0.05) {
+            const baseScore = 10;
+            const weightedScore = Math.round(baseScore * config.temporalWeight);
+            scoreBreakdown.temporal += weightedScore;
+            reasons.push({
+              type: "temporal",
+              description: "Mostly different active days",
+              weight: weightedScore,
+              evidence: `Only ${sharedDays.size} of ${totalUniqueDays} days shared (${Math.round(dayOverlapRatio * 100)}% overlap)`,
+            });
+          }
+        }
+      }
+
       // ========== HANDOFF PATTERN DETECTION ==========
 
       const handoffData = detectHandoffPattern(p1, p2, messages);
@@ -410,7 +462,14 @@ export function detectAltsAdvanced(
       // All three metrics should be similar for same author.
       // Note: casual English chat has a fairly narrow range for these metrics,
       // so thresholds must be tight to avoid flagging normal same-language speakers.
-      if (simpsonsDiff < 0.005 && brunetsWDiff < 0.5 && yulesKDiff < 10) {
+      // v4.4: Thresholds scale with sample size — more data = tighter thresholds.
+      const vocabMinMsgs = Math.min(p1.messageCount, p2.messageCount);
+      const vocabSampleConf = Math.min(1, (vocabMinMsgs - 20) / 80); // 0 at 20 msgs, 1 at 100+
+      const simpsonThreshHigh = 0.005 + 0.01 * (1 - vocabSampleConf);   // 0.015 at low data, 0.005 at high
+      const brunetsThreshHigh = 0.5 + 1.0 * (1 - vocabSampleConf);      // 1.5 at low data, 0.5 at high
+      const yulesKThreshHigh = 10 + 15 * (1 - vocabSampleConf);          // 25 at low data, 10 at high
+
+      if (simpsonsDiff < simpsonThreshHigh && brunetsWDiff < brunetsThreshHigh && yulesKDiff < yulesKThreshHigh) {
         const baseScore = 20;
         const weightedScore = Math.round(baseScore * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -420,7 +479,7 @@ export function detectAltsAdvanced(
           weight: weightedScore,
           evidence: `Simpson's D: ${simpsonsDiff.toFixed(3)} diff, Brunet's W: ${brunetsWDiff.toFixed(1)} diff, Yule's K: ${yulesKDiff.toFixed(0)} diff`,
         });
-      } else if (simpsonsDiff < 0.01 && brunetsWDiff < 1 && yulesKDiff < 20) {
+      } else if (simpsonsDiff < simpsonThreshHigh * 2 && brunetsWDiff < brunetsThreshHigh * 2 && yulesKDiff < yulesKThreshHigh * 2) {
         const baseScore = 10;
         const weightedScore = Math.round(baseScore * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -429,6 +488,33 @@ export function detectAltsAdvanced(
           description: "Similar vocabulary complexity",
           weight: weightedScore,
           evidence: `Simpson's D: ${simpsonsDiff.toFixed(3)} diff, Yule's K: ${yulesKDiff.toFixed(0)} diff`,
+        });
+      }
+
+      // ========== MESSAGE ENTROPY (v4.4) ==========
+      // Shannon entropy measures information density per character.
+      // Same-author accounts tend to have very similar entropy values.
+
+      const entropyDiff = Math.abs(p1.messageEntropy - p2.messageEntropy);
+      if (entropyDiff < 0.1 && p1.messageEntropy > 0 && p2.messageEntropy > 0) {
+        const baseScore = 10;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Matching message entropy",
+          weight: weightedScore,
+          evidence: `${p1.name}: ${p1.messageEntropy.toFixed(2)} bits/char, ${p2.name}: ${p2.messageEntropy.toFixed(2)} bits/char (diff: ${entropyDiff.toFixed(3)})`,
+        });
+      } else if (entropyDiff < 0.2 && p1.messageEntropy > 0 && p2.messageEntropy > 0) {
+        const baseScore = 5;
+        const weightedScore = Math.round(baseScore * config.linguisticWeight);
+        scoreBreakdown.linguistic += weightedScore;
+        reasons.push({
+          type: "linguistic",
+          description: "Similar message entropy",
+          weight: weightedScore,
+          evidence: `${p1.name}: ${p1.messageEntropy.toFixed(2)} bits/char, ${p2.name}: ${p2.messageEntropy.toFixed(2)} bits/char`,
         });
       }
 
@@ -533,9 +619,17 @@ export function detectAltsAdvanced(
       }
 
       // ========== CHARACTER N-GRAM SIMILARITY ==========
+      // v4.4: Thresholds scale with corpus size. Same-language English speakers
+      // converge to ~0.94-0.97 similarity as word count grows, so larger corpora
+      // need higher thresholds to avoid false positives.
 
       const ngramSim = cosineSimilarity(p1.charNgrams, p2.charNgrams);
-      if (ngramSim > config.ngramThresholdHigh) {
+      const ngramCorpusSize = Math.min(p1.wordCount, p2.wordCount);
+      const ngramBaselineShift = Math.min(0.015, ngramCorpusSize / 50000); // up to +0.015 at 50k words
+      const ngramThreshHigh = config.ngramThresholdHigh + ngramBaselineShift;
+      const ngramThreshMed = config.ngramThresholdMed + ngramBaselineShift;
+
+      if (ngramSim > ngramThreshHigh) {
         const baseScore = 20;
         const weightedScore = Math.round(baseScore * config.ngramWeight * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -543,9 +637,9 @@ export function detectAltsAdvanced(
           type: "linguistic",
           description: "Nearly identical character patterns",
           weight: weightedScore,
-          evidence: `${Math.round(ngramSim * 100)}% n-gram similarity`,
+          evidence: `${Math.round(ngramSim * 100)}% n-gram similarity (threshold: ${Math.round(ngramThreshHigh * 100)}%)`,
         });
-      } else if (ngramSim > config.ngramThresholdMed) {
+      } else if (ngramSim > ngramThreshMed) {
         const baseScore = 12;
         const weightedScore = Math.round(baseScore * config.ngramWeight * config.linguisticWeight);
         scoreBreakdown.linguistic += weightedScore;
@@ -553,7 +647,7 @@ export function detectAltsAdvanced(
           type: "linguistic",
           description: "Very high character pattern match",
           weight: weightedScore,
-          evidence: `${Math.round(ngramSim * 100)}% n-gram similarity`,
+          evidence: `${Math.round(ngramSim * 100)}% n-gram similarity (threshold: ${Math.round(ngramThreshMed * 100)}%)`,
         });
       }
 
@@ -697,17 +791,26 @@ export function detectAltsAdvanced(
       }
 
       // ========== MICRO-PATTERNS ==========
+      // v4.4: Compare rates instead of booleans. Two players match on a pattern
+      // when both have a rate above 0.1 AND their rates are within 0.15 of each other.
+
+      const MICRO_MIN_RATE = 0.1;   // Must be present in >10% of messages
+      const MICRO_MAX_DIFF = 0.15;  // Rates must be within 15% of each other
+
+      function microMatch(r1: number, r2: number): boolean {
+        return r1 >= MICRO_MIN_RATE && r2 >= MICRO_MIN_RATE && Math.abs(r1 - r2) < MICRO_MAX_DIFF;
+      }
 
       const microMatches: string[] = [];
-      if (p1.microPatterns.doubleSpaces && p2.microPatterns.doubleSpaces) microMatches.push("double spaces");
-      if (p1.microPatterns.noSpaceAfterPunct && p2.microPatterns.noSpaceAfterPunct) microMatches.push("no space after punct");
-      if (p1.microPatterns.excessiveCaps && p2.microPatterns.excessiveCaps) microMatches.push("EXCESSIVE CAPS");
+      if (microMatch(p1.microPatterns.doubleSpaces, p2.microPatterns.doubleSpaces)) microMatches.push("double spaces");
+      if (microMatch(p1.microPatterns.noSpaceAfterPunct, p2.microPatterns.noSpaceAfterPunct)) microMatches.push("no space after punct");
+      if (microMatch(p1.microPatterns.excessiveCaps, p2.microPatterns.excessiveCaps)) microMatches.push("EXCESSIVE CAPS");
 
       const commonMicroMatches: string[] = [];
-      if (p1.microPatterns.lowercaseI && p2.microPatterns.lowercaseI) commonMicroMatches.push("lowercase i");
-      if (p1.microPatterns.allLowercase && p2.microPatterns.allLowercase) commonMicroMatches.push("all lowercase");
-      if (p1.microPatterns.noCapitalStart && p2.microPatterns.noCapitalStart) commonMicroMatches.push("no capital start");
-      if (p1.microPatterns.numberSubstitution && p2.microPatterns.numberSubstitution) commonMicroMatches.push("number subs");
+      if (microMatch(p1.microPatterns.lowercaseI, p2.microPatterns.lowercaseI)) commonMicroMatches.push("lowercase i");
+      if (microMatch(p1.microPatterns.allLowercase, p2.microPatterns.allLowercase)) commonMicroMatches.push("all lowercase");
+      if (microMatch(p1.microPatterns.noCapitalStart, p2.microPatterns.noCapitalStart)) commonMicroMatches.push("no capital start");
+      if (microMatch(p1.microPatterns.numberSubstitution, p2.microPatterns.numberSubstitution)) commonMicroMatches.push("number subs");
 
       if (microMatches.length >= 2) {
         const baseScore = 18;
@@ -817,9 +920,12 @@ export function detectAltsAdvanced(
       }
 
       // ========== PHRASE OVERLAP ==========
+      // v4.4: Filter out common English phrases to avoid false positives
 
       const phraseOverlap = p1.commonPhrases.filter(p =>
-        p2.commonPhrases.includes(p) && p.split(' ').length >= 3
+        p2.commonPhrases.includes(p) &&
+        p.split(' ').length >= 3 &&
+        !COMMON_PHRASES.has(p.toLowerCase())
       );
       if (phraseOverlap.length >= 3) {
         const baseScore = 25;
@@ -899,6 +1005,38 @@ export function detectAltsAdvanced(
         });
       }
 
+      // ========== RESPONSE LATENCY FINGERPRINT (v4.4) ==========
+      // How quickly someone responds is a stable personal trait.
+      // Only compare when both players have enough response data.
+
+      const p1HasLatency = p1.responseLatencyDistribution.some(v => v > 0);
+      const p2HasLatency = p2.responseLatencyDistribution.some(v => v > 0);
+
+      if (p1HasLatency && p2HasLatency) {
+        const latencySim = distributionSimilarity(p1.responseLatencyDistribution, p2.responseLatencyDistribution);
+        if (latencySim > 0.90) {
+          const baseScore = 15;
+          const weightedScore = Math.round(baseScore * config.behavioralWeight);
+          scoreBreakdown.behavioral += weightedScore;
+          reasons.push({
+            type: "behavioral",
+            description: "Same response timing profile",
+            weight: weightedScore,
+            evidence: `${Math.round(latencySim * 100)}% response latency distribution match`,
+          });
+        } else if (latencySim > 0.80) {
+          const baseScore = 8;
+          const weightedScore = Math.round(baseScore * config.behavioralWeight);
+          scoreBreakdown.behavioral += weightedScore;
+          reasons.push({
+            type: "behavioral",
+            description: "Similar response timing",
+            weight: weightedScore,
+            evidence: `${Math.round(latencySim * 100)}% response latency distribution match`,
+          });
+        }
+      }
+
       // ========== NETWORK ANALYSIS ==========
 
       const p1MentionsP2 = p1.mentionedPlayers.has(p2.name);
@@ -906,22 +1044,47 @@ export function detectAltsAdvanced(
       const p1RespondsToP2 = p1.responsePartners.has(p2.name);
       const p2RespondsToP1 = p2.responsePartners.has(p1.name);
 
-      // Check for self-talk pattern (VERY SUSPICIOUS - v4.1)
-      const selfTalkKey = [p1.name, p2.name].sort().join("|");
-      const selfTalkScore = selfTalkMap.get(selfTalkKey) || 0;
+      // v4.4: Inline self-talk detection — reuses ngramSim, functionWordSim,
+      // sharedTypos, and microMatches already computed above in this pair loop.
+      // No separate O(n^2) pass needed.
+      const p1ToP2Responses = p1.responsePartners.get(p2.name) || 0;
+      const p2ToP1Responses = p2.responsePartners.get(p1.name) || 0;
+      const talkToEachOther = p1ToP2Responses >= 3 || p2ToP1Responses >= 3 ||
+        (p1MentionsP2 && p2MentionsP1);
 
-      if (selfTalkScore >= 50) {
-        // They TALK to each other but have SAME writing style = very suspicious
-        const baseScore = Math.min(selfTalkScore, 45);
-        const weightedScore = Math.round(baseScore * config.networkWeight * 1.5);
-        scoreBreakdown.network += weightedScore;
-        reasons.push({
-          type: "network",
-          description: "SELF-TALK DETECTED: Talk to each other but write identically",
-          weight: weightedScore,
-          evidence: `Suspicion score: ${selfTalkScore} (same style while conversing)`,
-        });
-      } else if (!p1MentionsP2 && !p2MentionsP1 && !p1RespondsToP2 && !p2RespondsToP1 &&
+      if (talkToEachOther) {
+        // They interact — check if writing style is suspiciously identical
+        const sameStyle = ngramSim >= 0.92 ||
+          (functionWordSim >= 0.90 && ngramSim >= 0.88) ||
+          (distinctiveSharedTypos.length >= 3) ||
+          (microMatches.length >= 3 && ngramSim >= 0.85);
+
+        if (sameStyle) {
+          let selfTalkScore = 0;
+          const selfTalkEvidence: string[] = [];
+
+          if (ngramSim >= 0.92) { selfTalkScore += 40; selfTalkEvidence.push(`identical char patterns (${Math.round(ngramSim * 100)}%)`); }
+          if (functionWordSim >= 0.90) { selfTalkScore += 30; selfTalkEvidence.push(`same unconscious word usage (${Math.round(functionWordSim * 100)}%)`); }
+          if (distinctiveSharedTypos.length >= 2) { selfTalkScore += 25; selfTalkEvidence.push(`same typos: ${distinctiveSharedTypos.join(", ")}`); }
+          if (microMatches.length >= 2) { selfTalkScore += 15; selfTalkEvidence.push(`${microMatches.length} typing quirks match`); }
+          if (p1ToP2Responses >= 5 && p2ToP1Responses >= 5) { selfTalkScore += 20; selfTalkEvidence.push(`${p1ToP2Responses + p2ToP1Responses} exchanges`); }
+
+          if (selfTalkScore >= 50) {
+            const baseScore = Math.min(selfTalkScore, 45);
+            const weightedScore = Math.round(baseScore * config.networkWeight * 1.5);
+            scoreBreakdown.network += weightedScore;
+            reasons.push({
+              type: "network",
+              description: "SELF-TALK DETECTED: Talk to each other but write identically",
+              weight: weightedScore,
+              evidence: selfTalkEvidence.join(" · "),
+            });
+          }
+        }
+      }
+
+      if (!(talkToEachOther && scoreBreakdown.network > 0) &&
+          !p1MentionsP2 && !p2MentionsP1 && !p1RespondsToP2 && !p2RespondsToP1 &&
           p1.messageCount >= 50 && p2.messageCount >= 50) {
         // Original logic: never interact
         const baseScore = 8;
@@ -994,6 +1157,14 @@ export function detectAltsAdvanced(
         });
       }
 
+      // ========== DATA CONFIDENCE SCALING (v4.4) ==========
+      // Players near the minimum message threshold produce noisier signals.
+      // Scale total score down when data is scarce to reduce false positives.
+      const minMessages = Math.min(p1.messageCount, p2.messageCount);
+      const dataConfidence = Math.min(1, (minMessages - config.minMessages) / 80);
+      // At minMessages: score reduced by 40%. At minMessages+80: full score.
+      totalScore = Math.round(totalScore * (0.6 + 0.4 * dataConfidence));
+
       // Store in matrix
       scores[i][j] = totalScore;
       scores[j][i] = totalScore;
@@ -1005,9 +1176,12 @@ export function detectAltsAdvanced(
 
       // Use config thresholds for reporting
       if (totalScore >= config.minScoreToReport && strongReasons.length >= config.minStrongReasons) {
-        // Configurable confidence formula
+        // Sigmoid confidence formula (v4.4) — S-curve gives diminishing returns at extremes
+        // Center point scales with config: higher confidenceBase = need more evidence
+        const sigmoidCenter = config.confidenceBase * 10; // e.g. balanced: 120, strict: 150
+        const sigmoidSteepness = config.confidenceMultiplier * 0.075; // e.g. balanced: 0.03
         const confidence = Math.min(
-          Math.round(totalScore * config.confidenceMultiplier + config.confidenceBase),
+          Math.round(95 / (1 + Math.exp(-sigmoidSteepness * (totalScore - sigmoidCenter)))),
           95
         );
 

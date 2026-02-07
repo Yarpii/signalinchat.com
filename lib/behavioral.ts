@@ -59,6 +59,45 @@ export function findResponsePartners(
 }
 
 /**
+ * v4.4: Build response latency distribution for a player.
+ * Measures how quickly someone responds after another player's message.
+ * Buckets: 0-2s, 2-5s, 5-10s, 10-20s, 20-30s, 30-60s, 60-120s, 120s+
+ * The shape of this distribution is a personal fingerprint.
+ */
+export function buildResponseLatencyDistribution(
+  playerName: string,
+  messages: ChatMessage[]
+): number[] {
+  const buckets = [2, 5, 10, 20, 30, 60, 120, Infinity];
+  const dist = new Array(buckets.length).fill(0);
+  let totalResponses = 0;
+
+  for (let i = 1; i < messages.length; i++) {
+    if (messages[i].player !== playerName) continue;
+
+    // Find the most recent message from a different player
+    for (let j = i - 1; j >= 0 && j >= i - 5; j--) {
+      if (messages[j].player === playerName) continue;
+      const delay = messages[i].absoluteTime - messages[j].absoluteTime;
+      if (delay <= 0 || delay > 120) break; // Only care about responses within 2 min
+
+      for (let b = 0; b < buckets.length; b++) {
+        if (delay <= buckets[b]) {
+          dist[b]++;
+          totalResponses++;
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  // Normalize
+  if (totalResponses === 0) return dist;
+  return dist.map(c => Math.round((c / totalResponses) * 1000) / 1000);
+}
+
+/**
  * Find mentioned players
  */
 export function findMentionedPlayers(messages: string[], allPlayers: string[]): Set<string> {
@@ -225,9 +264,10 @@ export function detectSharedUniqueWords(
   );
 
   const sharedUnique: string[] = [];
-  // Word must be used by at most 2 players (ideally only these two)
-  // to be considered truly unique to this pair.
-  const uniqueThreshold = 2;
+  // v4.4: Threshold scales with player count.
+  // In small chats (<=5), a word used by 2/5 players (40%) is not rare — require exclusive use.
+  // In larger chats, 2 out of many is already very distinctive.
+  const uniqueThreshold = totalPlayers <= 5 ? 1 : 2;
 
   for (const word of p1Words) {
     if (p2Words.has(word)) {
@@ -448,13 +488,35 @@ export function detectSlips(
 
     const playerMessages = messages.filter(m => m.player === player.name);
 
-    // Split messages into time windows and analyze style consistency
-    const earlyMsgs = playerMessages.slice(0, Math.floor(playerMessages.length / 3));
-    const midMsgs = playerMessages.slice(
-      Math.floor(playerMessages.length / 3),
-      Math.floor(2 * playerMessages.length / 3)
-    );
-    const lateMsgs = playerMessages.slice(Math.floor(2 * playerMessages.length / 3));
+    // v4.4: Split by day (using dayIndex) for multi-day logs, or by thirds
+    // for single-day logs. Day-based splitting catches style shifts when
+    // different users log in on different days on the same account.
+    const dayGroups = new Map<number, ChatMessage[]>();
+    for (const msg of playerMessages) {
+      if (!dayGroups.has(msg.dayIndex)) dayGroups.set(msg.dayIndex, []);
+      dayGroups.get(msg.dayIndex)!.push(msg);
+    }
+
+    let earlyMsgs: ChatMessage[];
+    let midMsgs: ChatMessage[];
+    let lateMsgs: ChatMessage[];
+
+    if (dayGroups.size >= 3) {
+      // Multi-day: compare across days
+      const sortedDays = [...dayGroups.entries()].sort((a, b) => a[0] - b[0]);
+      const thirdLen = Math.ceil(sortedDays.length / 3);
+      earlyMsgs = sortedDays.slice(0, thirdLen).flatMap(([, msgs]) => msgs);
+      midMsgs = sortedDays.slice(thirdLen, thirdLen * 2).flatMap(([, msgs]) => msgs);
+      lateMsgs = sortedDays.slice(thirdLen * 2).flatMap(([, msgs]) => msgs);
+    } else {
+      // Single/few day(s): fall back to index-based thirds
+      earlyMsgs = playerMessages.slice(0, Math.floor(playerMessages.length / 3));
+      midMsgs = playerMessages.slice(
+        Math.floor(playerMessages.length / 3),
+        Math.floor(2 * playerMessages.length / 3)
+      );
+      lateMsgs = playerMessages.slice(Math.floor(2 * playerMessages.length / 3));
+    }
 
     // Check for capitalization inconsistency
     const earlyLowercase = countLowercaseRatio(earlyMsgs.map(m => m.message));
@@ -565,13 +627,18 @@ function countMicroPatternMatches(p1: AdvancedPlayerStats, p2: AdvancedPlayerSta
   const m1 = p1.microPatterns;
   const m2 = p2.microPatterns;
 
+  // v4.4: Compare rates instead of booleans. Match when both > 10% and within 15%.
+  const MIN_RATE = 0.1;
+  const MAX_DIFF = 0.15;
+  function rateMatch(r1: number, r2: number): boolean {
+    return r1 >= MIN_RATE && r2 >= MIN_RATE && Math.abs(r1 - r2) < MAX_DIFF;
+  }
+
   // Only count DISTINCTIVE patterns that indicate individual style.
-  // "lowercaseI", "allLowercase", "noCapitalStart" are extremely common
-  // in casual internet English and should NOT count as fingerprints.
-  if (m1.excessiveCaps && m2.excessiveCaps) matches++;
-  if (m1.numberSubstitution && m2.numberSubstitution) matches++;
-  if (m1.doubleSpaces && m2.doubleSpaces) matches++;
-  if (m1.noSpaceAfterPunct && m2.noSpaceAfterPunct) matches++;
+  if (rateMatch(m1.excessiveCaps, m2.excessiveCaps)) matches++;
+  if (rateMatch(m1.numberSubstitution, m2.numberSubstitution)) matches++;
+  if (rateMatch(m1.doubleSpaces, m2.doubleSpaces)) matches++;
+  if (rateMatch(m1.noSpaceAfterPunct, m2.noSpaceAfterPunct)) matches++;
 
   return matches;
 }

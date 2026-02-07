@@ -45,6 +45,7 @@ export interface AdvancedPlayerStats {
   yulesK: number; // Yule's characteristic K
   simpsonsD: number; // NEW: Simpson's Diversity Index
   brunetsW: number; // NEW: Brunet's W statistic
+  messageEntropy: number; // v4.4: Shannon entropy (bits/char)
   avgWordLength: number;
   wordLengthDistribution: number[]; // Distribution of word lengths 1-15+
   messageLengthDistribution: number[]; // NEW: Distribution of message lengths
@@ -62,6 +63,9 @@ export interface AdvancedPlayerStats {
   topicFingerprint: Map<string, number>; // Topic word frequencies
   wurmTopics: Map<string, number>; // Game-specific topic usage (kept for backwards compat)
   gameTopics: Map<string, number>; // Game-specific topic usage
+
+  // v4.4: Response latency fingerprint
+  responseLatencyDistribution: number[]; // Normalized histogram of response times
 
   // Raw data for comparison
   allMessages: string[];
@@ -121,14 +125,16 @@ export interface SimilarityMatrix {
 }
 
 // Micro-patterns for forensic fingerprinting
+// v4.4: Rates (0.0-1.0) instead of booleans for finer-grained comparison.
+// Boolean accessors still work: `if (p.lowercaseI)` is truthy when rate > 0.
 export interface MicroPatterns {
-  lowercaseI: boolean;        // writes "i" instead of "I"
-  noCapitalStart: boolean;    // starts sentences without capital
-  allLowercase: boolean;      // all lowercase
-  excessiveCaps: boolean;     // USES LOTS OF CAPS
-  numberSubstitution: boolean; // "2" for "to", "4" for "for"
-  doubleSpaces: boolean;      // two spaces  between words
-  noSpaceAfterPunct: boolean; // no space after.punctuation
+  lowercaseI: number;        // rate: writes "i" instead of "I"
+  noCapitalStart: number;    // rate: starts sentences without capital
+  allLowercase: number;      // rate: all lowercase
+  excessiveCaps: number;     // rate: USES LOTS OF CAPS
+  numberSubstitution: number; // rate: "2" for "to", "4" for "for"
+  doubleSpaces: number;      // rate: two spaces  between words
+  noSpaceAfterPunct: number; // rate: no space after.punctuation
 }
 
 // Emoticon style fingerprint
