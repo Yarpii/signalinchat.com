@@ -33,11 +33,11 @@ export default function RootLayout({
 
 function Navigation() {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-primary/80 backdrop-blur-lg border-b border-border">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <a href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
+          <a href="/" className="flex items-center gap-2.5 group">
+            <div className="w-8 h-8 bg-accent rounded-xl flex items-center justify-center shadow-glow-sm transition-shadow group-hover:shadow-glow-md">
               <svg
                 className="w-5 h-5 text-white"
                 fill="none"
@@ -60,19 +60,19 @@ function Navigation() {
           <div className="hidden sm:flex items-center gap-1">
             <a
               href="/#features"
-              className="px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-lg transition-colors text-sm"
+              className="px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-accent-subtle rounded-xl transition-all duration-200 text-sm"
             >
               Features
             </a>
             <a
               href="/#how-it-works"
-              className="px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-lg transition-colors text-sm"
+              className="px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-accent-subtle rounded-xl transition-all duration-200 text-sm"
             >
               How It Works
             </a>
             <a
               href="/analyzer/docs"
-              className="px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-tertiary rounded-lg transition-colors text-sm"
+              className="px-3 py-2 text-text-secondary hover:text-text-primary hover:bg-accent-subtle rounded-xl transition-all duration-200 text-sm"
             >
               Docs
             </a>
@@ -80,7 +80,7 @@ function Navigation() {
             <ThemeToggle />
             <a
               href="/analyzer"
-              className="ml-1 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors text-sm font-medium"
+              className="ml-1 px-4 py-2 bg-accent text-white rounded-xl hover:bg-accent-hover transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-glow-sm"
             >
               Open Analyzer
             </a>
@@ -90,7 +90,7 @@ function Navigation() {
             <ThemeToggle />
             <a
               href="/analyzer"
-              className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium"
+              className="px-4 py-2 bg-accent text-white rounded-xl text-sm font-medium shadow-sm"
             >
               Analyzer
             </a>
@@ -103,7 +103,10 @@ function Navigation() {
 
 function Footer() {
   return (
-    <footer className="bg-bg-secondary border-t border-border mt-0">
+    <footer className="relative bg-bg-secondary border-t border-border mt-0">
+      {/* Subtle top gradient accent */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
@@ -131,34 +134,36 @@ function Footer() {
               Forensic chat analysis platform for online communities. Detect alt accounts and
               uncover behavioral patterns using proven stylometry techniques.
             </p>
-            <p className="text-text-muted text-xs mt-4 flex items-center gap-1.5">
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-success/8 border border-success/15 rounded-full">
               <svg className="w-3.5 h-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              100% client-side &mdash; your data never leaves your browser
-            </p>
+              <span className="text-success text-xs font-medium">
+                100% client-side &mdash; your data never leaves your browser
+              </span>
+            </div>
           </div>
 
           <div>
             <h3 className="font-semibold text-text-primary text-sm mb-4">Product</h3>
             <ul className="space-y-2.5 text-sm text-text-secondary">
               <li>
-                <a href="/analyzer" className="hover:text-text-primary transition-colors">
+                <a href="/analyzer" className="hover:text-accent transition-colors duration-200">
                   Chat Analyzer
                 </a>
               </li>
               <li>
-                <a href="/analyzer/docs" className="hover:text-text-primary transition-colors">
+                <a href="/analyzer/docs" className="hover:text-accent transition-colors duration-200">
                   Documentation
                 </a>
               </li>
               <li>
-                <a href="/#features" className="hover:text-text-primary transition-colors">
+                <a href="/#features" className="hover:text-accent transition-colors duration-200">
                   Features
                 </a>
               </li>
               <li>
-                <a href="/#how-it-works" className="hover:text-text-primary transition-colors">
+                <a href="/#how-it-works" className="hover:text-accent transition-colors duration-200">
                   How It Works
                 </a>
               </li>
@@ -171,19 +176,28 @@ function Footer() {
             </h3>
             <ul className="space-y-2.5 text-sm text-text-secondary">
               <li>
-                <a href="/analyzer/wurm" className="hover:text-text-primary transition-colors">Wurm Online</a>
+                <a href="/analyzer/wurm" className="hover:text-accent transition-colors duration-200 inline-flex items-center gap-2">
+                  Wurm Online
+                  <span className="badge-live">LIVE</span>
+                </a>
               </li>
               <li>
-                <a href="/analyzer/generic" className="hover:text-text-primary transition-colors">Generic / Other</a>
+                <a href="/analyzer/generic" className="hover:text-accent transition-colors duration-200 inline-flex items-center gap-2">
+                  Generic / Other
+                  <span className="badge-live">LIVE</span>
+                </a>
               </li>
               <li className="text-text-muted text-xs pt-1">More games coming soon</li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-border mt-10 pt-6 text-center text-xs text-text-muted">
-          &copy; {new Date().getFullYear()} Signal In Chat. All rights
-          reserved.
+        <div className="border-t border-border mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-muted">
+          <span>&copy; {new Date().getFullYear()} Signal In Chat. All rights reserved.</span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-success rounded-full" />
+            All systems operational
+          </span>
         </div>
       </div>
     </footer>

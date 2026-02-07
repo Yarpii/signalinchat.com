@@ -34,7 +34,9 @@ function useAnimatedCounter(target: number, duration = 1200, start = false) {
     const step = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
-      setValue(Math.floor(progress * target));
+      // Ease-out cubic for smooth deceleration
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.floor(eased * target));
       if (progress < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -58,10 +60,14 @@ export default function HomePage() {
 
   return (
     <div className="pt-16">
-      {/* Hero Section */}
+      {/* ================================================================
+          HERO SECTION
+          ================================================================ */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-accent/8 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+        {/* Background effects */}
+        <div className="absolute inset-0 bg-grid opacity-40 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-accent/6 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-accent/4 rounded-full blur-3xl pointer-events-none" />
 
         <div
           ref={hero.ref}
@@ -69,7 +75,7 @@ export default function HomePage() {
         >
           <div className="text-center max-w-4xl mx-auto">
             {/* Trust badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-bg-secondary border border-border rounded-full text-text-secondary text-sm mb-8 shadow-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full text-text-secondary text-sm mb-8">
               <svg className="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
@@ -92,13 +98,13 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
                 href="/analyzer"
-                className="px-8 py-3.5 bg-accent text-white rounded-xl hover:bg-accent-hover transition-all text-base font-semibold shadow-lg shadow-accent/20 hover:shadow-accent/30 hover:-translate-y-0.5 animate-pulse-glow"
+                className="px-8 py-3.5 bg-accent text-white rounded-xl hover:bg-accent-hover transition-all duration-300 text-base font-semibold shadow-lg shadow-accent/20 hover:shadow-accent/30 hover:-translate-y-0.5 animate-pulse-glow"
               >
                 Open Analyzer
               </a>
               <a
                 href="/analyzer/docs"
-                className="px-8 py-3.5 bg-bg-secondary text-text-secondary rounded-xl hover:bg-bg-tertiary transition-colors text-base border border-border"
+                className="px-8 py-3.5 glass text-text-secondary rounded-xl hover:text-text-primary transition-all duration-200 text-base"
               >
                 Read Documentation
               </a>
@@ -107,7 +113,8 @@ export default function HomePage() {
 
           {/* Hero visual — mock analyzer UI */}
           <div className="mt-16 max-w-5xl mx-auto animate-scale-in delay-300">
-            <div className="bg-bg-secondary rounded-2xl border border-border p-6 shadow-xl hover-lift">
+            <div className="card-elevated rounded-2xl p-6 hover-lift">
+              {/* Window chrome */}
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-3 h-3 rounded-full bg-error/40" />
                 <div className="w-3 h-3 rounded-full bg-warning/40" />
@@ -134,7 +141,7 @@ export default function HomePage() {
                     <span className="font-semibold text-success">
                       Player_B
                     </span>
-                    <span className="px-2 py-0.5 bg-error text-white text-xs rounded font-bold">
+                    <span className="px-2 py-0.5 bg-error/15 text-error text-xs rounded-lg font-bold border border-error/20">
                       NEVER ONLINE TOGETHER
                     </span>
                   </div>
@@ -152,14 +159,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Key metrics bar */}
+      {/* ================================================================
+          KEY METRICS BAR
+          ================================================================ */}
       <section className="border-y border-border bg-bg-secondary/60">
         <div
           ref={metrics.ref}
           className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 ${metrics.inView ? "" : "opacity-0"}`}
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <AnimatedMetric value={6} label="Analysis Categories" started={metrics.inView} delay={0} />
+            <AnimatedMetric value={35} label="Detection Algorithms" started={metrics.inView} delay={0} />
             <AnimatedMetric value={6} label="Algorithm Modes" started={metrics.inView} delay={100} />
             <AnimatedMetric value={100} label="Client-Side" suffix="%" started={metrics.inView} delay={200} />
             <AnimatedMetric value={0} label="Data Sent to Server" started={metrics.inView} delay={300} />
@@ -167,7 +176,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* ================================================================
+          FEATURES SECTION
+          ================================================================ */}
       <section id="features" className="py-24">
         <div
           ref={features.ref}
@@ -186,7 +197,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { color: "error", title: "Temporal Analysis", description: "Detect accounts that are never online together and find handoff patterns where one player stops and another starts within minutes.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />, delay: 0 },
+              { color: "error", title: "Temporal Analysis", description: "Detect accounts that are never online together, find handoff patterns, and analyze cross-day session complementarity with response latency fingerprinting.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />, delay: 0 },
               { color: "warning", title: "Stylometry Engine", description: "Function word analysis, character n-grams, vocabulary complexity (Yule's K, Simpson's D, Brunet's W), sentence structure fingerprinting, and deep punctuation habit analysis.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />, delay: 100 },
               { color: "accent", title: "Behavioral Profiling", description: "Greeting style, typo patterns, micro-typing habits, emoticon profiling, abbreviation/contraction fingerprinting, word length preferences, and topic interest matching.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />, delay: 200 },
               { color: "success", title: "Social Network Analysis", description: "Map who talks to whom, detect self-talk between accounts, identify conflicts, and find one-way interaction patterns.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />, delay: 300 },
@@ -195,10 +206,10 @@ export default function HomePage() {
             ].map((card, i) => (
               <div
                 key={i}
-                className={`bg-bg-secondary rounded-2xl border border-border p-6 hover-lift group ${features.inView ? "animate-fade-in-up" : "opacity-0"}`}
+                className={`card-glow rounded-2xl p-6 hover-lift group ${features.inView ? "animate-fade-in-up" : "opacity-0"}`}
                 style={{ animationDelay: `${card.delay}ms` }}
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-${card.color}/10`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-${card.color}/10 group-hover:bg-${card.color}/15 transition-colors duration-300`}>
                   <svg className={`w-6 h-6 text-${card.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     {card.icon}
                   </svg>
@@ -211,11 +222,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className="py-24 bg-bg-secondary/50">
+      {/* ================================================================
+          HOW IT WORKS
+          ================================================================ */}
+      <section id="how-it-works" className="py-24 bg-bg-secondary/50 relative">
+        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
         <div
           ref={howItWorks.ref}
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         >
           <div className={`text-center mb-16 ${howItWorks.inView ? "animate-fade-in-up" : "opacity-0"}`}>
             <p className="text-accent font-semibold text-sm uppercase tracking-wider mb-3">Getting started</p>
@@ -238,10 +252,17 @@ export default function HomePage() {
                 className={`text-center ${howItWorks.inView ? "animate-fade-in-up" : "opacity-0"}`}
                 style={{ animationDelay: `${i * 150}ms` }}
               >
-                <div className="w-16 h-16 bg-accent/10 border-2 border-accent/20 rounded-2xl flex items-center justify-center mx-auto mb-5 animate-float" style={{ animationDelay: `${i * 500}ms` }}>
-                  <svg className="w-7 h-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    {step.icon}
-                  </svg>
+                <div className="relative w-16 h-16 mx-auto mb-5">
+                  <div className="absolute inset-0 bg-accent/10 rounded-2xl animate-float" style={{ animationDelay: `${i * 500}ms` }} />
+                  <div className="relative w-full h-full border-2 border-accent/20 rounded-2xl flex items-center justify-center">
+                    <svg className="w-7 h-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      {step.icon}
+                    </svg>
+                  </div>
+                  {/* Step number */}
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-accent text-white rounded-full flex items-center justify-center text-xs font-bold shadow-glow-sm">
+                    {step.number}
+                  </div>
                 </div>
                 <h3 className="text-lg font-semibold text-text-primary mb-3">{step.title}</h3>
                 <p className="text-text-secondary text-sm leading-relaxed">{step.description}</p>
@@ -251,7 +272,7 @@ export default function HomePage() {
 
           {/* Connector line */}
           <div className="hidden md:flex justify-center mt-10">
-            <div className="flex items-center gap-2 text-text-muted text-sm">
+            <div className="flex items-center gap-2 text-text-muted text-sm glass px-4 py-2 rounded-full">
               <svg className="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
@@ -261,7 +282,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Supported Games */}
+      {/* ================================================================
+          SUPPORTED GAMES
+          ================================================================ */}
       <section id="games" className="py-24">
         <div
           ref={games.ref}
@@ -279,31 +302,32 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {/* Wurm Online */}
             <a
               href="/analyzer/wurm"
-              className={`bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden hover:border-accent/50 hover-lift group ${games.inView ? "animate-fade-in-up" : "opacity-0"}`}
+              className={`card-glow rounded-2xl p-8 text-center relative overflow-hidden hover:border-accent/50 hover-lift group ${games.inView ? "animate-fade-in-up" : "opacity-0"}`}
             >
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2 py-1 bg-success/15 rounded-full">
-                <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-                <span className="text-success text-xs font-semibold">LIVE</span>
+              <div className="absolute top-3 right-3">
+                <span className="badge-live">LIVE</span>
               </div>
-              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-accent/20 transition-colors">
+              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-accent/20 transition-colors duration-300">
                 <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors">Wurm Online</h3>
+              <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors duration-200">Wurm Online</h3>
               <p className="text-text-secondary text-sm">
                 Full support with 100+ game-specific abbreviations,
                 terminology, and an optimized detection mode.
               </p>
             </a>
 
-            <div className={`group bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden transition-all duration-300 hover:shadow-lg ${games.inView ? "animate-fade-in-up delay-200" : "opacity-0"}`}>
+            {/* Discord (Coming Soon) */}
+            <div className={`group card rounded-2xl p-8 text-center relative overflow-hidden ${games.inView ? "animate-fade-in-up delay-200" : "opacity-0"}`}>
               {/* Gradient background on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/15 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/8 to-info/6 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               {/* Top accent line */}
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-500 opacity-30" />
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
 
               <div className="relative">
                 <div className="flex justify-end mb-3">
@@ -312,7 +336,7 @@ export default function HomePage() {
                   </span>
                 </div>
                 <div className="w-16 h-16 bg-bg-tertiary rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <svg className="w-8 h-8 text-text-muted group-hover:text-indigo-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-8 h-8 text-text-muted group-hover:text-accent transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
@@ -322,26 +346,26 @@ export default function HomePage() {
                 </p>
                 <div className="flex justify-center gap-1.5 mt-4">
                   {["Stylometry", "Temporal", "Network"].map((f) => (
-                    <span key={f} className="px-2 py-0.5 bg-bg-tertiary rounded text-[10px] text-text-muted font-medium">{f}</span>
+                    <span key={f} className="px-2 py-0.5 bg-bg-tertiary border border-border-subtle rounded text-[10px] text-text-muted font-medium">{f}</span>
                   ))}
                 </div>
               </div>
             </div>
 
+            {/* Generic */}
             <a
               href="/analyzer/generic"
-              className={`bg-bg-secondary rounded-2xl border border-border p-8 text-center relative overflow-hidden hover:border-accent/50 hover-lift group ${games.inView ? "animate-fade-in-up delay-400" : "opacity-0"}`}
+              className={`card-glow rounded-2xl p-8 text-center relative overflow-hidden hover:border-accent/50 hover-lift group ${games.inView ? "animate-fade-in-up delay-400" : "opacity-0"}`}
             >
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2 py-1 bg-success/15 rounded-full">
-                <span className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-                <span className="text-success text-xs font-semibold">LIVE</span>
+              <div className="absolute top-3 right-3">
+                <span className="badge-live">LIVE</span>
               </div>
-              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-accent/20 transition-colors">
+              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-accent/20 transition-colors duration-300">
                 <svg className="w-8 h-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors">Generic / Other</h3>
+              <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors duration-200">Generic / Other</h3>
               <p className="text-text-secondary text-sm">
                 Works with any timestamped chat format &mdash; no
                 game-specific vocabulary required.
@@ -351,11 +375,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Science / methodology section */}
-      <section className="py-24 bg-bg-secondary/50">
+      {/* ================================================================
+          SCIENCE / METHODOLOGY
+          ================================================================ */}
+      <section className="py-24 bg-bg-secondary/50 relative">
+        <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
         <div
           ref={science.ref}
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         >
           <div className={`text-center mb-16 ${science.inView ? "animate-fade-in-up" : "opacity-0"}`}>
             <p className="text-accent font-semibold text-sm uppercase tracking-wider mb-3">Methodology</p>
@@ -385,7 +412,7 @@ export default function HomePage() {
             ].map((badge, i) => (
               <div
                 key={i}
-                className={`bg-bg-secondary rounded-xl p-4 text-center border border-border hover-lift ${science.inView ? "animate-scale-in" : "opacity-0"}`}
+                className={`card rounded-xl p-4 text-center hover-lift ${science.inView ? "animate-scale-in" : "opacity-0"}`}
                 style={{ animationDelay: `${i * 60}ms` }}
               >
                 <div className="font-semibold text-text-primary text-sm">{badge.label}</div>
@@ -395,7 +422,7 @@ export default function HomePage() {
           </div>
 
           {/* Methodology explainer */}
-          <div className={`max-w-3xl mx-auto bg-bg-secondary rounded-2xl border border-border p-8 ${science.inView ? "animate-fade-in-up delay-400" : "opacity-0"}`}>
+          <div className={`max-w-3xl mx-auto card-elevated rounded-2xl p-8 gradient-border ${science.inView ? "animate-fade-in-up delay-400" : "opacity-0"}`}>
             <h3 className="text-lg font-semibold text-text-primary mb-4">How does stylometry work?</h3>
             <p className="text-text-secondary text-sm leading-relaxed mb-4">
               Every person has a unique &ldquo;writing fingerprint&rdquo; &mdash; patterns in how they use
@@ -410,9 +437,9 @@ export default function HomePage() {
               profile for each player, then compares all profiles to identify potential matches.
             </p>
             <div className="mt-6">
-              <a href="/analyzer/docs" className="text-accent text-sm font-medium hover:underline inline-flex items-center gap-1">
+              <a href="/analyzer/docs" className="text-accent text-sm font-medium hover:underline inline-flex items-center gap-1 group">
                 Read full technical documentation
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </a>
@@ -421,7 +448,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Privacy-first section */}
+      {/* ================================================================
+          PRIVACY-FIRST
+          ================================================================ */}
       <section className="py-24">
         <div
           ref={privacy.ref}
@@ -447,25 +476,27 @@ export default function HomePage() {
                     "Open analysis &mdash; all methods are documented",
                   ].map((text, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                      <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-3 h-3 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
                       <span className="text-text-secondary text-sm" dangerouslySetInnerHTML={{ __html: text }} />
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className={`bg-bg-secondary rounded-2xl border border-border p-8 ${privacy.inView ? "animate-slide-in-right" : "opacity-0"}`}>
-                <div className="space-y-4">
+              <div className={`card-elevated rounded-2xl p-8 ${privacy.inView ? "animate-slide-in-right" : "opacity-0"}`}>
+                <div className="space-y-5">
                   {[
-                    { title: "Browser-only processing", desc: "JavaScript runs entirely in your browser tab. No backend API calls." },
-                    { title: "Static website", desc: "The entire application is a static site \u2014 no server-side code." },
-                    { title: "Exportable results", desc: "Download reports as JSON, HTML, or TXT \u2014 you own the output." },
+                    { title: "Browser-only processing", desc: "JavaScript runs entirely in your browser tab. No backend API calls.", icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /> },
+                    { title: "Static website", desc: "The entire application is a static site \u2014 no server-side code.", icon: <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" /> },
+                    { title: "Exportable results", desc: "Download reports as JSON, HTML, or TXT \u2014 you own the output.", icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-4">
                       <div className="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <svg className="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        <svg className="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          {item.icon}
                         </svg>
                       </div>
                       <div>
@@ -481,7 +512,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FAQ Section */}
+      {/* ================================================================
+          FAQ
+          ================================================================ */}
       <section className="py-24 bg-bg-secondary/50">
         <div
           ref={faq.ref}
@@ -494,7 +527,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[
               {
                 q: "How accurate is the alt detection?",
@@ -510,7 +543,7 @@ export default function HomePage() {
               },
               {
                 q: "Can someone fool the detection by changing how they type?",
-                a: "It's very difficult. Function word usage (the, a, but, and, etc.) is unconscious and nearly impossible to consistently change. The system analyzes 20+ dimensions simultaneously \u2014 someone would need to alter their timing, vocabulary, punctuation habits, sentence structure, contraction style, emoticon placement, greeting style, and typo patterns all at once.",
+                a: "It's very difficult. Function word usage (the, a, but, and, etc.) is unconscious and nearly impossible to consistently change. The system analyzes 35+ dimensions simultaneously \u2014 someone would need to alter their timing, vocabulary, punctuation habits, sentence structure, contraction style, emoticon placement, greeting style, and typo patterns all at once.",
               },
               {
                 q: "What's the difference between the algorithm modes?",
@@ -527,11 +560,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24">
+      {/* ================================================================
+          CTA
+          ================================================================ */}
+      <section className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl pointer-events-none" />
         <div
           ref={cta.ref}
-          className={`max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center ${cta.inView ? "animate-fade-in-up" : "opacity-0"}`}
+          className={`relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center ${cta.inView ? "animate-fade-in-up" : "opacity-0"}`}
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-text-primary mb-6">
             Ready to find the signal?
@@ -542,7 +579,7 @@ export default function HomePage() {
           </p>
           <a
             href="/analyzer"
-            className="inline-block px-10 py-4 bg-accent text-white rounded-xl hover:bg-accent-hover transition-all text-lg font-semibold shadow-lg shadow-accent/20 hover:shadow-accent/30 hover:-translate-y-0.5"
+            className="inline-block px-10 py-4 bg-accent text-white rounded-xl hover:bg-accent-hover transition-all duration-300 text-lg font-semibold shadow-lg shadow-accent/20 hover:shadow-glow-md hover:-translate-y-0.5"
           >
             Open Analyzer
           </a>
@@ -587,12 +624,12 @@ function FAQItem({ question, answer, inView, delay }: { question: string; answer
   const [open, setOpen] = useState(false);
   return (
     <div
-      className={`bg-bg-secondary rounded-xl border border-border overflow-hidden ${inView ? "animate-fade-in-up" : "opacity-0"}`}
+      className={`card rounded-xl overflow-hidden ${inView ? "animate-fade-in-up" : "opacity-0"}`}
       style={{ animationDelay: `${delay}ms` }}
     >
       <button
         onClick={() => setOpen(!open)}
-        className="w-full text-left px-6 py-5 flex items-center justify-between gap-4 hover:bg-bg-tertiary/50 transition-colors"
+        className="w-full text-left px-6 py-5 flex items-center justify-between gap-4 hover:bg-accent-subtle transition-colors duration-200"
       >
         <span className="font-semibold text-text-primary text-sm">{question}</span>
         <svg
@@ -606,10 +643,12 @@ function FAQItem({ question, answer, inView, delay }: { question: string; answer
         </svg>
       </button>
       <div
-        className={`overflow-hidden transition-all duration-300 ${open ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
+        className={`grid transition-all duration-300 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
       >
-        <div className="px-6 pb-5 text-text-secondary text-sm leading-relaxed">
-          {answer}
+        <div className="overflow-hidden">
+          <div className="px-6 pb-5 text-text-secondary text-sm leading-relaxed">
+            {answer}
+          </div>
         </div>
       </div>
     </div>
